@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telefonista IA - Dashboard Multi-Cliente</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-brand { font-weight: bold; }
+        .card-custom { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .badge-channel { font-size: 0.8em; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#">🤖 Telefonista IA | Dashboard Comercial</a>
+            <div class="d-flex align-items-center">
+                <span class="text-light me-3">Cliente Activo:</span>
+                <select id="selectCliente" class="form-select form-select-sm" style="width: 220px;" onchange="cargarDatosCliente()">
+                    <option value="cliente_demo_inmo">Agencia Inmobiliaria</option>
+                    <option value="clinica_sonrisas">Clínica Dental Sonrisas</option>
+                </select>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container my-4">
+        <!-- Métricas Rápidas -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card card-custom p-3 bg-white text-dark">
+                    <div class="text-muted small">Total Leads Capturados</div>
+                    <div class="fs-2 fw-bold text-primary" id="numLeads">0</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-custom p-3 bg-white text-dark">
+                    <div class="text-muted small">Citas / Visitas Agendadas</div>
+                    <div class="fs-2 fw-bold text-success" id="numCitas">0</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-custom p-3 bg-white text-dark">
+                    <div class="text-muted small">Estado de la IA</div>
+                    <div class="fs-2 fw-bold text-info">🟢 Operativa 24/7</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <!-- Tabla de Leads -->
+            <div class="col-md-6">
+                <div class="card card-custom p-3 bg-white">
+                    <h5 class="card-title mb-3">👤 Leads & Contactos Interesados</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Teléfono</th>
+                                    <th>Canal</th>
+                                    <th>Interés</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaLeads">
+                                <tr><td colspan="4" class="text-center text-muted">Cargando leads...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Citas -->
+            <div class="col-md-6">
+                <div class="card card-custom p-3 bg-white">
+                    <h5 class="card-title mb-3">📅 Citas y Visitas Reservadas</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha / Hora</th>
+                                    <th>Cliente</th>
+                                    <th>Contacto</th>
+                                    <th>Motivo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaCitas">
+                                <tr><td colspan="4" class="text-center text-muted">Cargando citas...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = "http://178.156.186.149:8089";
+
+        async function cargarDatosCliente() {
+            const clienteId = document.getElementById("selectCliente").value;
+            
+            try {
+                const resLeads = await fetch(`${API_BASE}/api/v1/leads`);
+                const dataLeads = await resLeads.json();
+                
+                const leadsFiltrados = dataLeads.leads.filter(l => l.cliente_id === clienteId || !l.cliente_id);
+                
+                document.getElementById("numLeads").innerText = leadsFiltrados.length;
+
+                let htmlLeads = "";
+                if (leadsFiltrados.length === 0) {
+                    htmlLeads = `<tr><td colspan="4" class="text-center text-muted">No hay leads registrados aún</td></tr>`;
+                } else {
+                    leadsFiltrados.forEach(lead => {
+                        const canalBadge = lead.canal === 'voz' ? 
+                            '<span class="badge bg-warning text-dark">🎙️ Voz</span>' : 
+                            '<span class="badge bg-success">💬 WhatsApp</span>';
+
+                        htmlLeads += `
+                            <tr>
+                                <td><strong>${lead.nombre}</strong></td>
+                                <td>${lead.telefono}</td>
+                                <td>${canalBadge}</td>
+                                <td>${lead.interes}</td>
+                            </tr>
+                        `;
+                    });
+                }
+                document.getElementById("tablaLeads").innerHTML = htmlLeads;
+
+            } catch (error) {
+                console.error("Error cargando datos:", error);
+            }
+        }
+
+        // Cargar datos al iniciar
+        cargarDatosCliente();
+    </script>
+</body>
+</html>

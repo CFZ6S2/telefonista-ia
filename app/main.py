@@ -1,6 +1,8 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.routers import voice, whatsapp, evolution
 from app.services.crm import obtener_leads
+import os
 
 app = FastAPI(
     title="Telefonista IA API",
@@ -18,9 +20,14 @@ def read_root():
     return {
         "status": "online",
         "message": "Telefonista IA operativa y escuchando.",
+        "dashboard": "/dashboard",
         "documentation": "/docs"
     }
 
 @app.get("/api/v1/leads")
 def listar_leads():
     return {"leads": obtener_leads()}
+
+# Montar carpeta estática
+if os.path.exists("public"):
+    app.mount("/dashboard", StaticFiles(directory="public", html=True), name="dashboard")

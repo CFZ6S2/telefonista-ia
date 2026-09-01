@@ -9,9 +9,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# URL base interna de Evolution API
-EVOLUTION_API_BASE = "http://localhost:8082"
-EVOLUTION_GLOBAL_KEY = getattr(settings, "EVOLUTION_API_KEY", "mi_clave_api_segura_evolution")
+EVOLUTION_API_BASE = settings.EVOLUTION_API_BASE
+EVOLUTION_GLOBAL_KEY = settings.EVOLUTION_API_KEY
 
 @router.post("/evolution-webhook/{cliente_id}")
 async def webhook_evolution_whatsapp(cliente_id: str, request: Request):

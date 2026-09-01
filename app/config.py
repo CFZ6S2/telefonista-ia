@@ -6,8 +6,8 @@ class Settings(BaseSettings):
     OPENAI_BASE_URL: str = "https://api.deepseek.com"
     DEEPSEEK_MODEL: str = "deepseek-chat"
     
-    EVOLUTION_API_KEY: str = "mi_clave_api_segura_evolution"
-    EVOLUTION_API_BASE: str = "http://localhost:8082"
+    EVOLUTION_API_KEY: str = "EvoWorldModels2026"
+    EVOLUTION_API_BASE: str = "http://172.17.0.1:8082"
     VPS_PUBLIC_URL: str = "http://telefonista-api.duckdns.org"
     VAPI_API_KEY: str = "tu_vapi_api_key"
     ADMIN_SECRET_KEY: str = "admin_secret_key_telefonista"

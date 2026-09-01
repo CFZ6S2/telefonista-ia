@@ -3,6 +3,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 import logging
 from app.database import db, CATALOGO_CLIENTES
+from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
+from app.services.vapi_manager import crear_o_vincular_asistente_vapi
 
 logger = logging.getLogger(__name__)
 
@@ -20,18 +22,33 @@ class CrearClientePayload(BaseModel):
     nombre_empresa: str
     telefono_voz: Optional[str] = "No configurado"
     telefono_whatsapp: Optional[str] = "No configurado"
+    vapi_api_key: Optional[str] = None
     inventario: List[ProductoItem]
 
 @router.post("/alta-cliente")
-def dar_de_alta_cliente(payload: CrearClientePayload):
+async def dar_de_alta_cliente(payload: CrearClientePayload):
     """
-    Endpoint para dar de alta a un cliente nuevo guardando opcionalmente 
-    sus dos números de contacto distintos (uno para llamadas y otro para WhatsApp).
+    Da de alta al cliente y AUTOMÁTICAMENTE:
+    1. Crea y conecta el Webhook en Evolution API (WhatsApp).
+    2. Crea el Asistente en Vapi.ai (Voz) asociando su Server URL.
+    3. Registra el catálogo en Firestore / BD.
     """
     cliente_id = payload.cliente_id.lower().replace(" ", "_")
     items_dict = [item.model_dump() for item in payload.inventario]
+    vps_base_url = "http://178.156.186.149:8089"
 
-    # 1. Guardar en Firebase Firestore
+    # A. Conexión automática con Evolution API (WhatsApp)
+    res_evolution = await crear_instancia_evolution_y_conectar_webhook(cliente_id, vps_base_url)
+
+    # B. Conexión automática con Vapi.ai (Voz)
+    res_vapi = await crear_o_vincular_asistente_vapi(
+        cliente_id=cliente_id,
+        nombre_empresa=payload.nombre_empresa,
+        webhook_base_url=vps_base_url,
+        vapi_api_key=payload.vapi_api_key
+    )
+
+    # C. Guardar en Firebase Firestore / BD
     if db:
         try:
             doc_ref = db.collection("clientes").document(cliente_id)
@@ -39,6 +56,8 @@ def dar_de_alta_cliente(payload: CrearClientePayload):
                 "nombre_empresa": payload.nombre_empresa,
                 "telefono_voz": payload.telefono_voz,
                 "telefono_whatsapp": payload.telefono_whatsapp,
+                "vapi_status": res_vapi,
+                "evolution_status": res_evolution.get("status"),
                 "creado_el": firestore.SERVER_TIMESTAMP
             })
 
@@ -49,15 +68,33 @@ def dar_de_alta_cliente(payload: CrearClientePayload):
         except Exception as e:
             logger.error(f"Error guardando en Firestore: {e}")
 
-    # 2. Guardar en memoria local (Fallback)
     CATALOGO_CLIENTES[cliente_id] = items_dict
 
     return {
         "status": "success",
-        "message": f"Cliente '{payload.nombre_empresa}' configurado exitosamente con sus 2 canales.",
+        "message": f"Cliente '{payload.nombre_empresa}' dado de alta y CONECTADO automáticamente a WhatsApp y Vapi.",
         "cliente_id": cliente_id,
-        "telefono_voz_cliente": payload.telefono_voz,
-        "telefono_whatsapp_cliente": payload.telefono_whatsapp,
-        "webhook_whatsapp_url": f"http://178.156.186.149:8089/api/v1/whatsapp/evolution-webhook/{cliente_id}",
-        "webhook_voz_url": f"http://178.156.186.149:8089/api/v1/voice/webhook/{cliente_id}"
+        "evolution_whatsapp": res_evolution,
+        "vapi_voz": res_vapi,
+        "webhook_whatsapp_url": f"{vps_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}",
+        "webhook_voz_url": f"{vps_base_url}/api/v1/voice/webhook/{cliente_id}"
     }
+
+@router.get("/qr-whatsapp/{cliente_id}")
+async def ver_qr_whatsapp(cliente_id: str):
+    """Obtiene el QR de WhatsApp en vivo desde Evolution API para escanear en pantalla."""
+    data = await obtener_qr_instancia_evolution(cliente_id)
+    return data
+
+@router.get("/lista-clientes")
+def listar_clientes():
+    if db:
+        try:
+            docs = db.collection("clientes").stream()
+            clientes = [{"cliente_id": doc.id, **doc.to_dict()} for doc in docs]
+            if clientes:
+                return {"clientes": clientes}
+        except Exception as e:
+            logger.error(f"Error consultando clientes en Firestore: {e}")
+
+    return {"clientes": list(CATALOGO_CLIENTES.keys())}

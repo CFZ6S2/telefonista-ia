@@ -48,21 +48,29 @@ def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[s
     if not db:
         return []
 
-    query_lower = query.lower()
+    query_lower = query.lower().strip()
     resultados = []
     try:
         docs = db.collection("clientes").document(cliente_id).collection("inventario").stream()
+        all_items = []
         for doc in docs:
             item = doc.to_dict()
             item["id"] = doc.id
+            all_items.append(item)
+
+        if not query_lower or query_lower in ["todo", "todos", "all", "catalogo", "lista", "servicios", "opciones", "disponible", "disponibles", "menu"]:
+            return all_items
+
+        for item in all_items:
             nombre = item.get("nombre", "").lower()
             categoria = item.get("categoria", "").lower()
             detalles = item.get("detalles", "").lower()
 
-            if query_lower in nombre or query_lower in categoria or query_lower in detalles:
+            words = query_lower.split()
+            if any(w in nombre or w in categoria or w in detalles for w in words):
                 resultados.append(item)
 
-        return resultados
+        return resultados if resultados else all_items
     except Exception as e:
         logger.error(f"Error consultando inventario en Firestore para {cliente_id}: {e}")
         return []

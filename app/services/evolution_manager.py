@@ -4,8 +4,8 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-EVOLUTION_API_BASE = getattr(settings, "EVOLUTION_API_BASE", "http://localhost:8082")
-EVOLUTION_GLOBAL_KEY = getattr(settings, "EVOLUTION_API_KEY", "mi_clave_api_segura_evolution")
+EVOLUTION_API_BASE = settings.EVOLUTION_API_BASE
+EVOLUTION_GLOBAL_KEY = settings.EVOLUTION_API_KEY
 
 async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_base_url: str) -> dict:
     url_crear = f"{EVOLUTION_API_BASE}/instance/create"

@@ -79,19 +79,20 @@ async def enviar_mensaje_evolution_api(instance_name: str, remote_jid: str, text
     }
     payload = {
         "number": number,
+        "text": text,
         "options": {
             "delay": 1200,
             "presence": "composing",
             "linkPreview": True
-        },
-        "textMessage": {
-            "text": text
         }
     }
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(url, json=payload, headers=headers, timeout=10)
-            logger.info(f"[Evolution API Outgoing HTTP {response.status_code}] enviada a {number}")
+            if response.status_code >= 400:
+                logger.error(f"[Evolution API Outgoing HTTP {response.status_code}] error: {response.text}")
+            else:
+                logger.info(f"[Evolution API Outgoing HTTP {response.status_code}] enviada a {number}")
     except Exception as e:
         logger.error(f"[Evolution API Outgoing Error] No se pudo enviar el mensaje HTTP: {e}")

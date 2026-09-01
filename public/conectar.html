@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telefonista IA - Conecta tu WhatsApp</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface-elevated: #ffffff;
+            --border: #e5e7eb;
+            --text: #111827;
+            --text-secondary: #6b7280;
+            --text-tertiary: #9ca3af;
+            --primary: #075e54;
+            --primary-hover: #064d44;
+            --primary-light: #dcfce7;
+            --accent: #25d366;
+            --accent-glow: rgba(37, 211, 102, 0.15);
+            --danger: #ef4444;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #0c1017;
+                --surface: #161b26;
+                --surface-elevated: #1e2535;
+                --border: #2a3344;
+                --text: #f1f5f9;
+                --text-secondary: #94a3b8;
+                --text-tertiary: #64748b;
+                --primary: #34d399;
+                --primary-hover: #2cc08a;
+                --primary-light: #064e3b;
+                --accent: #34d399;
+                --accent-glow: rgba(52, 211, 153, 0.12);
+                --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+                --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+                --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+            }
+        }
+        :root[data-theme="dark"] {
+            --bg: #0c1017;
+            --surface: #161b26;
+            --surface-elevated: #1e2535;
+            --border: #2a3344;
+            --text: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-tertiary: #64748b;
+            --primary: #34d399;
+            --primary-hover: #2cc08a;
+            --primary-light: #064e3b;
+            --accent: #34d399;
+            --accent-glow: rgba(52, 211, 153, 0.12);
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 16px;
+        }
+
+        .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; margin-top: 16px; }
+        .logo-icon { font-size: 28px; }
+        .logo-text { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+        .logo-badge { font-size: 10px; font-weight: 600; background: var(--primary-light); color: var(--primary); padding: 3px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .wizard {
+            width: 100%;
+            max-width: 480px;
+            background: var(--surface);
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+        }
+
+        .wizard-header {
+            padding: 24px 28px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .wizard-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 6px; letter-spacing: -0.3px; }
+        .wizard-header p { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+        .steps {
+            display: flex; gap: 0; padding: 16px 28px;
+            border-bottom: 1px solid var(--border);
+        }
+        .step {
+            flex: 1; display: flex; align-items: center; gap: 8px;
+            font-size: 12px; font-weight: 600; color: var(--text-tertiary);
+            position: relative;
+        }
+        .step.active { color: var(--primary); }
+        .step.done { color: var(--accent); }
+        .step-num {
+            width: 24px; height: 24px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px; font-weight: 700;
+            background: var(--surface-elevated); border: 2px solid var(--border);
+            flex-shrink: 0;
+        }
+        .step.active .step-num { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .step.done .step-num { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+        .wizard-body { padding: 24px 28px 28px; }
+
+        .field { margin-bottom: 16px; }
+        .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+        .field input {
+            width: 100%; padding: 10px 14px; font-size: 14px;
+            border: 1.5px solid var(--border); border-radius: 10px;
+            background: var(--surface-elevated); color: var(--text);
+            font-family: inherit; outline: none; transition: border-color .2s;
+        }
+        .field input:focus { border-color: var(--primary); }
+        .field input::placeholder { color: var(--text-tertiary); }
+        .field .hint { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+
+        .btn {
+            width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+            border: none; border-radius: 10px; cursor: pointer;
+            font-family: inherit; transition: all .2s; display: flex;
+            align-items: center; justify-content: center; gap: 8px;
+        }
+        .btn-primary {
+            background: var(--primary); color: #fff;
+        }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .btn-success {
+            background: var(--accent); color: #fff;
+        }
+
+        .qr-container {
+            text-align: center; padding: 16px 0;
+        }
+        .qr-container img {
+            max-width: 260px; width: 100%; border-radius: 12px;
+            border: 2px solid var(--border); padding: 8px;
+            background: #fff;
+        }
+        .qr-instructions {
+            font-size: 13px; color: var(--text-secondary); margin-top: 14px; line-height: 1.6;
+        }
+        .qr-instructions strong { color: var(--text); }
+
+        .status-checking {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 12px; background: var(--accent-glow); border-radius: 10px;
+            font-size: 13px; font-weight: 500; color: var(--primary); margin-top: 16px;
+        }
+
+        .spinner {
+            width: 18px; height: 18px; border: 2.5px solid var(--border);
+            border-top-color: var(--primary); border-radius: 50%;
+            animation: spin .8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .success-view { text-align: center; padding: 20px 0; }
+        .success-icon { font-size: 56px; margin-bottom: 12px; }
+        .success-view h2 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+        .success-view p { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+        .success-card {
+            background: var(--primary-light); border-radius: 10px;
+            padding: 14px 18px; margin-top: 20px; text-align: left;
+        }
+        .success-card .label { font-size: 11px; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.4px; }
+        .success-card .value { font-size: 14px; font-weight: 600; color: var(--text); margin-top: 2px; }
+
+        .error-msg {
+            background: #fef2f2; color: #dc2626; border-radius: 8px;
+            padding: 10px 14px; font-size: 13px; margin-bottom: 12px; display: none;
+        }
+
+        .panel { display: none; }
+        .panel.active { display: block; }
+
+        .footer { margin-top: 24px; font-size: 11px; color: var(--text-tertiary); text-align: center; }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) .error-msg { background: #3b1111; color: #fca5a5; }
+            :root:not([data-theme="light"]) .qr-container img { border-color: var(--border); }
+        }
+        :root[data-theme="dark"] .error-msg { background: #3b1111; color: #fca5a5; }
+        :root[data-theme="dark"] .qr-container img { border-color: var(--border); }
+    </style>
+</head>
+<body>
+
+    <div class="logo">
+        <span class="logo-icon">🤖</span>
+        <span class="logo-text">Telefonista IA</span>
+        <span class="logo-badge">Onboarding</span>
+    </div>
+
+    <div class="wizard">
+        <div class="wizard-header">
+            <h1>Conecta tu WhatsApp de Empresa</h1>
+            <p>En 2 minutos tu negocio tendra un asistente IA respondiendo 24/7 por WhatsApp.</p>
+        </div>
+
+        <div class="steps">
+            <div class="step active" id="step1indicator">
+                <span class="step-num">1</span>
+                <span>Datos</span>
+            </div>
+            <div class="step" id="step2indicator">
+                <span class="step-num">2</span>
+                <span>Escanear QR</span>
+            </div>
+            <div class="step" id="step3indicator">
+                <span class="step-num">3</span>
+                <span>Listo</span>
+            </div>
+        </div>
+
+        <div class="wizard-body">
+            <!-- PASO 1: Datos -->
+            <div class="panel active" id="panel1">
+                <div class="error-msg" id="errorMsg"></div>
+                <div class="field">
+                    <label>Nombre de tu empresa</label>
+                    <input type="text" id="inputNombre" placeholder="Ej: Clinica Dental Sonrisas" required>
+                </div>
+                <div class="field">
+                    <label>Telefono de WhatsApp del negocio</label>
+                    <input type="tel" id="inputTelefono" placeholder="+34 600 123 456">
+                    <div class="hint">El numero cuyo WhatsApp quieres conectar a la IA</div>
+                </div>
+                <div class="field">
+                    <label>Tu nombre</label>
+                    <input type="text" id="inputContacto" placeholder="Nombre del responsable">
+                </div>
+                <div class="field">
+                    <label>Email (opcional)</label>
+                    <input type="email" id="inputEmail" placeholder="tu@email.com">
+                </div>
+                <button class="btn btn-primary" onclick="iniciarOnboarding()">
+                    Conectar mi WhatsApp
+                    <span style="font-size: 18px;">→</span>
+                </button>
+            </div>
+
+            <!-- PASO 2: QR -->
+            <div class="panel" id="panel2">
+                <div class="qr-container">
+                    <img id="qrImage" src="" alt="Codigo QR WhatsApp">
+                </div>
+                <div class="qr-instructions">
+                    <strong>Abre WhatsApp</strong> en el movil del negocio →
+                    <strong>Ajustes</strong> → <strong>Dispositivos vinculados</strong> →
+                    <strong>Vincular dispositivo</strong> → Escanea este codigo QR
+                </div>
+                <div class="status-checking" id="statusChecking">
+                    <div class="spinner"></div>
+                    Esperando conexion...
+                </div>
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="refrescarQR()">
+                    Refrescar codigo QR
+                </button>
+            </div>
+
+            <!-- PASO 3: Exito -->
+            <div class="panel" id="panel3">
+                <div class="success-view">
+                    <div class="success-icon">🎉</div>
+                    <h2>WhatsApp conectado con exito</h2>
+                    <p>Tu asistente IA esta activo y respondiendo mensajes automaticamente en el WhatsApp de tu negocio.</p>
+                    <div class="success-card">
+                        <div class="label">Tu empresa</div>
+                        <div class="value" id="successNombre">—</div>
+                    </div>
+                    <div class="success-card" style="margin-top: 8px;">
+                        <div class="label">Comandos de control</div>
+                        <div class="value">Escribe <strong>!ia off</strong> en tu WhatsApp para tomar el control manual. <strong>!ia on</strong> para reactivar la IA.</div>
+                    </div>
+                    <button class="btn btn-success" style="margin-top: 20px;" onclick="window.location.href='/dashboard/'">
+                        Ir al Panel de Control
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">Telefonista IA &middot; Asistente Virtual 24/7 para tu negocio</div>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let clienteId = null;
+        let pollingInterval = null;
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        function hideError() {
+            document.getElementById('errorMsg').style.display = 'none';
+        }
+
+        function setStep(n) {
+            ['step1indicator', 'step2indicator', 'step3indicator'].forEach((id, i) => {
+                const el = document.getElementById(id);
+                el.classList.remove('active', 'done');
+                if (i + 1 < n) el.classList.add('done');
+                else if (i + 1 === n) el.classList.add('active');
+            });
+            ['panel1', 'panel2', 'panel3'].forEach((id, i) => {
+                document.getElementById(id).classList.toggle('active', i + 1 === n);
+            });
+        }
+
+        async function iniciarOnboarding() {
+            hideError();
+            const nombre = document.getElementById('inputNombre').value.trim();
+            const telefono = document.getElementById('inputTelefono').value.trim();
+            const contacto = document.getElementById('inputContacto').value.trim();
+            const email = document.getElementById('inputEmail').value.trim();
+
+            if (!nombre) { showError('Introduce el nombre de tu empresa'); return; }
+            if (!telefono) { showError('Introduce el telefono de WhatsApp'); return; }
+            if (!contacto) { showError('Introduce tu nombre de contacto'); return; }
+
+            const btn = document.querySelector('#panel1 .btn');
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner" style="border-top-color:#fff;border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></div> Creando instancia...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/iniciar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        nombre_empresa: nombre,
+                        telefono_whatsapp: telefono,
+                        nombre_contacto: contacto,
+                        email: email
+                    })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showError(data.detail || 'Error al crear la instancia');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Conectar mi WhatsApp <span style="font-size:18px;">→</span>';
+                    return;
+                }
+
+                clienteId = data.cliente_id;
+
+                if (data.qrcode) {
+                    document.getElementById('qrImage').src = data.qrcode;
+                } else {
+                    await refrescarQR();
+                }
+
+                setStep(2);
+                iniciarPolling();
+
+            } catch (e) {
+                showError('Error de conexion. Verifica tu internet e intentalo de nuevo.');
+                btn.disabled = false;
+                btn.innerHTML = 'Conectar mi WhatsApp <span style="font-size:18px;">→</span>';
+            }
+        }
+
+        async function refrescarQR() {
+            if (!clienteId) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/qr/${clienteId}`);
+                const data = await res.json();
+                if (data.base64) {
+                    document.getElementById('qrImage').src = data.base64;
+                } else if (data.qrcode && data.qrcode.base64) {
+                    document.getElementById('qrImage').src = data.qrcode.base64;
+                }
+            } catch (e) {
+                console.warn('Error refrescando QR:', e);
+            }
+        }
+
+        function iniciarPolling() {
+            if (pollingInterval) clearInterval(pollingInterval);
+            pollingInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/api/v1/onboarding/estado/${clienteId}`);
+                    const data = await res.json();
+                    if (data.connected) {
+                        clearInterval(pollingInterval);
+                        document.getElementById('successNombre').textContent = document.getElementById('inputNombre').value.trim();
+                        setStep(3);
+                    }
+                } catch (e) { /* retry */ }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

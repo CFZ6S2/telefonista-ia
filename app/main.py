@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
-from app.routers import voice, whatsapp, evolution, admin_clientes
+from app.routers import voice, whatsapp, evolution, admin_clientes, onboarding
 from app.services.crm import obtener_leads
 
 app = FastAPI(
@@ -34,6 +34,7 @@ app.include_router(voice.router, prefix="/api/v1/voice", tags=["Voice Assistant"
 app.include_router(whatsapp.router, prefix="/api/v1/whatsapp", tags=["WhatsApp Meta API"])
 app.include_router(evolution.router, prefix="/api/v1/whatsapp", tags=["WhatsApp Evolution API Gratis"])
 app.include_router(admin_clientes.router, prefix="/api/v1/admin", tags=["Gestión de Clientes"])
+app.include_router(onboarding.router, prefix="/api/v1/onboarding", tags=["Onboarding Self-Service"])
 
 @app.get("/")
 def read_root():

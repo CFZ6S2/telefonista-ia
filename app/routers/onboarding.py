@@ -1,0 +1,93 @@
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+from typing import Optional
+import logging
+import httpx
+from app.database import _get_db, _server_timestamp
+from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
+from app.config import settings
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter()
+
+EVOLUTION_API_BASE = settings.EVOLUTION_API_BASE
+EVOLUTION_GLOBAL_KEY = settings.EVOLUTION_API_KEY
+
+
+class OnboardingPayload(BaseModel):
+    nombre_empresa: str
+    telefono_whatsapp: str
+    nombre_contacto: str
+    email: Optional[str] = ""
+
+
+@router.post("/iniciar")
+async def iniciar_onboarding(payload: OnboardingPayload):
+    cliente_id = payload.nombre_empresa.lower().strip().replace(" ", "_").replace(".", "")
+    cliente_id = "".join(c for c in cliente_id if c.isalnum() or c == "_")
+
+    db = _get_db()
+    if db:
+        existing = db.collection("clientes").document(cliente_id).get()
+        if existing.exists:
+            raise HTTPException(status_code=409, detail="Ya existe una empresa con ese nombre. Contacta con soporte.")
+
+    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "http://telefonista-api.duckdns.org")
+    res_evolution = await crear_instancia_evolution_y_conectar_webhook(cliente_id, vps_base_url)
+
+    if db:
+        try:
+            db.collection("clientes").document(cliente_id).set({
+                "nombre_empresa": payload.nombre_empresa,
+                "telefono_whatsapp": payload.telefono_whatsapp,
+                "nombre_contacto": payload.nombre_contacto,
+                "email": payload.email,
+                "ia_activa": True,
+                "onboarding_completado": False,
+                "creado_el": _server_timestamp()
+            })
+        except Exception as e:
+            logger.error(f"Error guardando cliente onboarding: {e}")
+
+    qr_base64 = res_evolution.get("qrcode")
+
+    return {
+        "status": "ok",
+        "cliente_id": cliente_id,
+        "qrcode": qr_base64,
+        "message": "Instancia creada. Escanea el codigo QR con WhatsApp."
+    }
+
+
+@router.get("/qr/{cliente_id}")
+async def obtener_qr_onboarding(cliente_id: str):
+    data = await obtener_qr_instancia_evolution(cliente_id)
+    return data
+
+
+@router.get("/estado/{cliente_id}")
+async def verificar_estado_conexion(cliente_id: str):
+    url = f"{EVOLUTION_API_BASE}/instance/connectionState/{cliente_id}"
+    headers = {"apikey": EVOLUTION_GLOBAL_KEY}
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                state = data.get("instance", {}).get("state", "unknown")
+                connected = state == "open"
+
+                if connected:
+                    db = _get_db()
+                    if db:
+                        db.collection("clientes").document(cliente_id).set(
+                            {"onboarding_completado": True}, merge=True
+                        )
+
+                return {"cliente_id": cliente_id, "state": state, "connected": connected}
+    except Exception as e:
+        logger.error(f"Error verificando estado de {cliente_id}: {e}")
+
+    return {"cliente_id": cliente_id, "state": "error", "connected": False}

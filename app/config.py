@@ -4,8 +4,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     OPENAI_API_KEY: str = "tu_clave_de_deepseek"
     OPENAI_BASE_URL: str = "https://api.deepseek.com"
-    DEEPSEEK_MODEL: str = "deepseek-v4-pro"
+    DEEPSEEK_MODEL: str = "deepseek-chat"
     
+    EVOLUTION_API_KEY: str = "mi_clave_api_segura_evolution"
+    EVOLUTION_API_BASE: str = "http://localhost:8082"
+    VPS_PUBLIC_URL: str = "http://178.156.186.149:8089"
+    VAPI_API_KEY: str = "tu_vapi_api_key"
+    ADMIN_SECRET_KEY: str = "admin_secret_key_telefonista"
+
     WHATSAPP_TOKEN: str = "tu_token_de_meta_whatsapp"
     WHATSAPP_PHONE_NUMBER_ID: str = "tu_phone_number_id_de_meta"
     VERIFY_TOKEN: str = "mi_token_de_verificacion_seguro"

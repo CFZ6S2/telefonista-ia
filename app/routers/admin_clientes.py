@@ -1,14 +1,26 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
+from firebase_admin import firestore
 from app.database import db, CATALOGO_CLIENTES
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
 from app.services.vapi_manager import crear_o_vincular_asistente_vapi
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Autenticación por Header API Key opcional/segura
+API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+def verificar_admin_api_key(api_key: str = Depends(API_KEY_HEADER)):
+    admin_secret = getattr(settings, "ADMIN_SECRET_KEY", None)
+    if admin_secret and api_key != admin_secret:
+        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Admin API Key")
+    return True
 
 class ProductoItem(BaseModel):
     nombre: str
@@ -25,17 +37,14 @@ class CrearClientePayload(BaseModel):
     vapi_api_key: Optional[str] = None
     inventario: List[ProductoItem]
 
-@router.post("/alta-cliente")
+@router.post("/alta-cliente", dependencies=[Depends(verificar_admin_api_key)])
 async def dar_de_alta_cliente(payload: CrearClientePayload):
     """
-    Da de alta al cliente y AUTOMÁTICAMENTE:
-    1. Crea y conecta el Webhook en Evolution API (WhatsApp).
-    2. Crea el Asistente en Vapi.ai (Voz) asociando su Server URL.
-    3. Registra el catálogo en Firestore / BD.
+    Da de alta al cliente en Firestore y conecta automáticamente Evolution API y Vapi.ai.
     """
     cliente_id = payload.cliente_id.lower().replace(" ", "_")
     items_dict = [item.model_dump() for item in payload.inventario]
-    vps_base_url = "http://178.156.186.149:8089"
+    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "http://178.156.186.149:8089")
 
     # A. Conexión automática con Evolution API (WhatsApp)
     res_evolution = await crear_instancia_evolution_y_conectar_webhook(cliente_id, vps_base_url)
@@ -48,7 +57,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         vapi_api_key=payload.vapi_api_key
     )
 
-    # C. Guardar en Firebase Firestore / BD
+    # C. Guardar en Firebase Firestore
     if db:
         try:
             doc_ref = db.collection("clientes").document(cliente_id)
@@ -82,7 +91,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
 
 @router.get("/qr-whatsapp/{cliente_id}")
 async def ver_qr_whatsapp(cliente_id: str):
-    """Obtiene el QR de WhatsApp en vivo desde Evolution API para escanear en pantalla."""
+    """Obtiene el QR de WhatsApp en vivo desde Evolution API."""
     data = await obtener_qr_instancia_evolution(cliente_id)
     return data
 

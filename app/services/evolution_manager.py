@@ -4,14 +4,10 @@ from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-EVOLUTION_API_BASE = "http://localhost:8082"  # URL interna en el VPS donde corre Evolution API
-EVOLUTION_GLOBAL_KEY = "mi_clave_api_segura_evolution"  # Configurada en docker-compose
+EVOLUTION_API_BASE = getattr(settings, "EVOLUTION_API_BASE", "http://localhost:8082")
+EVOLUTION_GLOBAL_KEY = getattr(settings, "EVOLUTION_API_KEY", "mi_clave_api_segura_evolution")
 
 async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_base_url: str) -> dict:
-    """
-    Crea automáticamente una instancia en Evolution API para el cliente_id
-    y le asigna su Webhook especifico (/api/v1/whatsapp/evolution-webhook/{cliente_id}).
-    """
     url_crear = f"{EVOLUTION_API_BASE}/instance/create"
     headers = {
         "apikey": EVOLUTION_GLOBAL_KEY,
@@ -52,9 +48,6 @@ async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_
         return {"status": "offline", "detail": str(e)}
 
 async def obtener_qr_instancia_evolution(cliente_id: str) -> dict:
-    """
-    Obtiene el código QR en base64 para mostrarlo en el dashboard y vincular el WhatsApp del cliente.
-    """
     url_qr = f"{EVOLUTION_API_BASE}/instance/connect/{cliente_id}"
     headers = {"apikey": EVOLUTION_GLOBAL_KEY}
 

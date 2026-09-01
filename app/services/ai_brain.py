@@ -13,24 +13,32 @@ client = OpenAI(
     base_url=settings.OPENAI_BASE_URL
 )
 
+# Prompt multilingüe dinámico
 SYSTEM_PROMPT_WHATSAPP = """
-Eres la IA comercial oficial de la empresa atendiendo a través de WhatsApp.
+You are the official commercial AI assistant for the business attending via WhatsApp.
 
-Directrices de Estilo:
-1. Responde de forma amable, cercana y profesional. Usa un tono conversacional de WhatsApp (puedes usar algún emoji con moderación).
-2. Proporciona detalles claros sobre precios, características y ubicaciones cuando te pregunten.
-3. Si el cliente muestra interés en un producto/servicio o solicita una visita/cita, utiliza las herramientas (Function Calling) correspondientes para registrar su interés o agendar la cita.
-4. Mantén los párrafos breves para facilitar la lectura en móviles.
+MULTILINGUAL INSTRUCTION:
+- Automatically detect the language used by the customer in their message (Spanish, English, French, German, Italian, etc.).
+- ALWAYS respond in the exact same language the user spoke to you.
+
+Style & Directives:
+1. Be friendly, approachable, and professional. Use a natural WhatsApp conversational tone with moderate emojis.
+2. Provide clear details about prices, features, and locations when asked.
+3. Use the available tools (Function Calling) to search the catalog, register leads, or schedule appointments.
+4. Keep paragraphs short for easy reading on smartphones.
 """
 
 SYSTEM_PROMPT_VOICE = """
-Eres la IA comercial oficial de la empresa atendiendo una llamada telefónica en tiempo real.
+You are the official commercial AI assistant attending a real-time phone call.
 
-Directrices de Estilo:
-1. Responde de manera extremadamente concisa, directa y natural.
-2. Evita textos largos o listas numeradas extensas; el interlocutor está escuchando por voz.
-3. Si el usuario hace una pregunta sobre el inventario, utiliza la herramienta `consultar_inventario` y resume el resultado en 1 o 2 frases habladas.
-4. Si muestra intención de compra o visita, ofrece enviarle la información por WhatsApp o agendar una cita directamente.
+MULTILINGUAL INSTRUCTION:
+- Automatically detect the language of the caller and respond in the exact same language.
+
+Style & Directives:
+1. Speak in an extremely concise, direct, and natural manner.
+2. Avoid long paragraphs or bulleted lists as the user is listening to speech.
+3. If asked about inventory, call `consultar_inventario` and summarize the result in 1 or 2 spoken sentences.
+4. Offer to send details via WhatsApp or schedule a visit directly.
 """
 
 HERRAMIENTAS_IA = [
@@ -38,13 +46,13 @@ HERRAMIENTAS_IA = [
         "type": "function",
         "function": {
             "name": "consultar_inventario",
-            "description": "Busca productos, inmuebles o servicios en el catálogo por palabras clave (ej: 'piso', 'alquiler', 'chalet', 'precio').",
+            "description": "Searches products, properties, or services in the catalog by keywords (e.g. 'apartment', 'rent', 'villa', 'price', 'piso').",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "consulta": {
                         "type": "string",
-                        "description": "Término de búsqueda o filtro"
+                        "description": "Search keyword or filter"
                     }
                 },
                 "required": ["consulta"]
@@ -55,14 +63,14 @@ HERRAMIENTAS_IA = [
         "type": "function",
         "function": {
             "name": "registrar_interes_lead",
-            "description": "Registra un lead/contacto interesado cuando el cliente facilita su nombre y/o teléfono, e indica su interés.",
+            "description": "Registers a lead when the customer provides their name, phone, or expresses interest in a product.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "nombre": {"type": "string", "description": "Nombre del cliente"},
-                    "telefono": {"type": "string", "description": "Teléfono de contacto"},
-                    "interes": {"type": "string", "description": "Producto o servicio de interés"},
-                    "notas": {"type": "string", "description": "Presupuesto, preferencias o notas adicionales"}
+                    "nombre": {"type": "string", "description": "Customer name"},
+                    "telefono": {"type": "string", "description": "Phone number"},
+                    "interes": {"type": "string", "description": "Product or service of interest"},
+                    "notas": {"type": "string", "description": "Budget or additional notes"}
                 },
                 "required": ["nombre", "interes"]
             }
@@ -72,15 +80,15 @@ HERRAMIENTAS_IA = [
         "type": "function",
         "function": {
             "name": "agendar_cita_visita",
-            "description": "Agenda una fecha y hora para una visita al inmueble o reunión de consultoría comercial.",
+            "description": "Schedules a date and time for a property visit or sales meeting.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "nombre": {"type": "string", "description": "Nombre del cliente"},
-                    "telefono": {"type": "string", "description": "Teléfono del cliente"},
-                    "fecha": {"type": "string", "description": "Fecha acordada (ej: '2026-09-05')"},
-                    "hora": {"type": "string", "description": "Hora acordada (ej: '11:00')"},
-                    "motivo": {"type": "string", "description": "Motivo de la cita (ej: Visita piso céntrico)"}
+                    "nombre": {"type": "string", "description": "Customer name"},
+                    "telefono": {"type": "string", "description": "Customer phone"},
+                    "fecha": {"type": "string", "description": "Agreed date (e.g. '2026-09-05')"},
+                    "hora": {"type": "string", "description": "Agreed time (e.g. '11:00')"},
+                    "motivo": {"type": "string", "description": "Reason for appointment"}
                 },
                 "required": ["nombre", "fecha", "hora", "motivo"]
             }
@@ -90,7 +98,7 @@ HERRAMIENTAS_IA = [
 
 def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp") -> str:
     """
-    Procesa una conversación utilizando la API de DeepSeek y Function Calling.
+    Procesa la conversación con DeepSeek soportando detección automática multilingüe.
     """
     if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek"]:
         return "Hola, soy el asistente comercial. (Simulación: configura tu DEEPSEEK_API_KEY en tu .env para responder)."

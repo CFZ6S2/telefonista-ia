@@ -43,6 +43,11 @@ def _server_timestamp():
         return _firestore_mod.SERVER_TIMESTAMP
     return datetime.now().isoformat()
 
+def _firestore_direction():
+    if _firestore_mod:
+        return _firestore_mod.Query.DESCENDING
+    return None
+
 def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[str, Any]]:
     db = _get_db()
     if not db:

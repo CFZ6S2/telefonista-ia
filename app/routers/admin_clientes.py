@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from app.database import _get_db, _server_timestamp
+from app.database import _get_db, _server_timestamp, _firestore_direction
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
 from app.services.vapi_manager import crear_o_vincular_asistente_vapi
 from app.config import settings
@@ -101,3 +101,54 @@ def listar_clientes():
     except Exception as e:
         logger.error(f"Error consultando clientes en Firestore: {e}")
         return {"clientes": []}
+
+@router.get("/conversaciones/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
+def listar_conversaciones(cliente_id: str):
+    db = _get_db()
+    if not db:
+        return {"conversaciones": []}
+    try:
+        convs_ref = db.collection("clientes").document(cliente_id).collection("conversaciones")
+        contactos = []
+        for doc in convs_ref.stream():
+            last_msg = None
+            msgs = doc.reference.collection("mensajes").order_by(
+                "timestamp", direction=_firestore_direction()
+            ).limit(1).stream()
+            for m in msgs:
+                last_msg = m.to_dict()
+            contactos.append({
+                "remitente": doc.id,
+                "ultimo_mensaje": last_msg.get("content", "") if last_msg else "",
+                "ultimo_role": last_msg.get("role", "") if last_msg else "",
+                "timestamp": str(last_msg.get("timestamp", "")) if last_msg else ""
+            })
+        contactos.sort(key=lambda x: x["timestamp"], reverse=True)
+        return {"conversaciones": contactos}
+    except Exception as e:
+        logger.error(f"Error listando conversaciones: {e}")
+        return {"conversaciones": []}
+
+@router.get("/conversaciones/{cliente_id}/{remitente}", dependencies=[Depends(verificar_admin_api_key)])
+def obtener_mensajes_conversacion(cliente_id: str, remitente: str, limite: int = 50):
+    db = _get_db()
+    if not db:
+        return {"mensajes": []}
+    try:
+        msgs_ref = db.collection("clientes").document(cliente_id)\
+                     .collection("conversaciones").document(remitente)\
+                     .collection("mensajes")\
+                     .order_by("timestamp")\
+                     .limit(limite)
+        mensajes = []
+        for doc in msgs_ref.stream():
+            data = doc.to_dict()
+            mensajes.append({
+                "role": data.get("role", "user"),
+                "content": data.get("content", ""),
+                "timestamp": str(data.get("timestamp", ""))
+            })
+        return {"mensajes": mensajes, "remitente": remitente, "cliente_id": cliente_id}
+    except Exception as e:
+        logger.error(f"Error leyendo mensajes: {e}")
+        return {"mensajes": []}

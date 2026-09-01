@@ -9,6 +9,30 @@
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .navbar-brand { font-weight: bold; }
         .card-custom { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+
+        /* Chat Panel */
+        .chat-container { display: flex; height: 520px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .chat-sidebar { width: 320px; min-width: 260px; background: #fff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; }
+        .chat-sidebar-header { padding: 12px 16px; background: #075e54; color: #fff; font-weight: 600; font-size: 14px; }
+        .chat-contact-list { flex: 1; overflow-y: auto; }
+        .chat-contact { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: background .15s; }
+        .chat-contact:hover, .chat-contact.active { background: #f0f9f4; }
+        .chat-contact-avatar { width: 40px; height: 40px; border-radius: 50%; background: #25d366; color: #fff; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px; flex-shrink: 0; }
+        .chat-contact-info { flex: 1; min-width: 0; }
+        .chat-contact-name { font-weight: 600; font-size: 13px; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-contact-preview { font-size: 12px; color: #667; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-contact-time { font-size: 11px; color: #999; white-space: nowrap; }
+
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #e5ddd5; }
+        .chat-main-header { padding: 12px 16px; background: #ededed; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
+        .chat-main-header-name { font-weight: 600; font-size: 14px; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+        .chat-bubble { max-width: 75%; padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.4; word-wrap: break-word; position: relative; }
+        .chat-bubble.user { align-self: flex-start; background: #fff; border-top-left-radius: 2px; }
+        .chat-bubble.assistant { align-self: flex-end; background: #dcf8c6; border-top-right-radius: 2px; }
+        .chat-bubble .chat-time { font-size: 10px; color: #999; margin-top: 4px; text-align: right; }
+        .chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px; }
+        .chat-badge-ia { font-size: 10px; color: #075e54; font-weight: 600; margin-bottom: 2px; }
     </style>
 </head>
 <body>
@@ -108,6 +132,35 @@
                 </div>
             </div>
         </div>
+
+        <!-- Panel de Chat en Vivo -->
+        <div class="mt-4">
+            <div class="card card-custom bg-white p-0 overflow-hidden">
+                <div class="chat-container" id="chatPanel">
+                    <div class="chat-sidebar">
+                        <div class="chat-sidebar-header">
+                            <span>💬 Bandeja de Entrada - Chat en Vivo</span>
+                            <button class="btn btn-sm btn-outline-light float-end py-0 px-2" onclick="cargarConversaciones()" title="Refrescar">↻</button>
+                        </div>
+                        <div class="chat-contact-list" id="chatContactList">
+                            <div class="text-center text-muted p-4" style="font-size:13px;">Selecciona una empresa para ver chats</div>
+                        </div>
+                    </div>
+                    <div class="chat-main">
+                        <div class="chat-main-header" id="chatMainHeader" style="display:none;">
+                            <div class="chat-contact-avatar" style="width:32px;height:32px;font-size:13px;" id="chatHeaderAvatar">?</div>
+                            <div>
+                                <div class="chat-main-header-name" id="chatHeaderName">—</div>
+                                <div style="font-size:11px;color:#666;" id="chatHeaderSub"></div>
+                            </div>
+                        </div>
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="chat-empty">Selecciona un contacto para ver la conversación</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MODAL PARA DAR DE ALTA CLIENTE REAL -->
@@ -195,7 +248,10 @@
             const savedKey = localStorage.getItem('telefonista_admin_key') || '';
             if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`);
+                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+                const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`, {
+                    headers: { 'X-API-Key': adminKey }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     LISTA_CLIENTES_API = data.clientes || [];
@@ -231,7 +287,10 @@
             }
 
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/qr-whatsapp/${clienteId}`);
+                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+                const res = await fetch(`${API_BASE}/api/v1/admin/qr-whatsapp/${clienteId}`, {
+                    headers: { 'X-API-Key': adminKey }
+                });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.qrcode && data.qrcode.base64) {
@@ -305,10 +364,11 @@
             }
 
             try {
-                // Fetch de leads y citas reales filtradas por cliente_id desde la API
+                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+                const hdrs = { 'X-API-Key': adminKey };
                 const [resLeads, resCitas] = await Promise.all([
-                    fetch(`${API_BASE}/api/v1/leads?cliente_id=${clienteId}`),
-                    fetch(`${API_BASE}/api/v1/citas?cliente_id=${clienteId}`)
+                    fetch(`${API_BASE}/api/v1/leads?cliente_id=${clienteId}`, { headers: hdrs }),
+                    fetch(`${API_BASE}/api/v1/citas?cliente_id=${clienteId}`, { headers: hdrs })
                 ]);
 
                 let leads = [];
@@ -373,6 +433,118 @@
             }
             document.getElementById("tablaCitas").innerHTML = htmlCitas;
         }
+
+        // ── Chat en Vivo ──
+        let chatAutoRefresh = null;
+
+        async function cargarConversaciones() {
+            const clienteId = document.getElementById("selectCliente").value;
+            const container = document.getElementById("chatContactList");
+            if (!clienteId) {
+                container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Selecciona una empresa para ver chats</div>';
+                return;
+            }
+            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}`, {
+                    headers: { 'X-API-Key': adminKey }
+                });
+                if (!res.ok) { container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error cargando chats (verifica API Key)</div>'; return; }
+                const data = await res.json();
+                const convs = data.conversaciones || [];
+                if (convs.length === 0) {
+                    container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">No hay conversaciones aún</div>';
+                    return;
+                }
+                let html = '';
+                convs.forEach(c => {
+                    const num = c.remitente.replace('@s.whatsapp.net', '');
+                    const initial = num.slice(-2);
+                    const preview = c.ultimo_role === 'assistant' ? '🤖 ' + c.ultimo_mensaje : c.ultimo_mensaje;
+                    const time = c.timestamp ? formatChatTime(c.timestamp) : '';
+                    html += `<div class="chat-contact" onclick="abrirChat('${clienteId}', '${c.remitente}')" data-remitente="${c.remitente}">
+                        <div class="chat-contact-avatar">${initial}</div>
+                        <div class="chat-contact-info">
+                            <div class="chat-contact-name">+${num}</div>
+                            <div class="chat-contact-preview">${escapeHtml(preview).substring(0, 60)}</div>
+                        </div>
+                        <div class="chat-contact-time">${time}</div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+            } catch (e) {
+                container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error de conexión</div>';
+            }
+        }
+
+        async function abrirChat(clienteId, remitente) {
+            document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
+            const active = document.querySelector(`.chat-contact[data-remitente="${remitente}"]`);
+            if (active) active.classList.add('active');
+
+            const num = remitente.replace('@s.whatsapp.net', '');
+            document.getElementById('chatMainHeader').style.display = 'flex';
+            document.getElementById('chatHeaderAvatar').textContent = num.slice(-2);
+            document.getElementById('chatHeaderName').textContent = '+' + num;
+            document.getElementById('chatHeaderSub').textContent = clienteId;
+
+            const container = document.getElementById('chatMessages');
+            container.innerHTML = '<div class="chat-empty">Cargando mensajes...</div>';
+
+            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}/${remitente}`, {
+                    headers: { 'X-API-Key': adminKey }
+                });
+                if (!res.ok) { container.innerHTML = '<div class="chat-empty">Error cargando mensajes</div>'; return; }
+                const data = await res.json();
+                const msgs = data.mensajes || [];
+                if (msgs.length === 0) {
+                    container.innerHTML = '<div class="chat-empty">Sin mensajes</div>';
+                    return;
+                }
+                let html = '';
+                msgs.forEach(m => {
+                    const roleClass = m.role === 'assistant' ? 'assistant' : 'user';
+                    const label = m.role === 'assistant' ? '<div class="chat-badge-ia">🤖 IA</div>' : '';
+                    const time = m.timestamp ? formatChatTime(m.timestamp) : '';
+                    html += `<div class="chat-bubble ${roleClass}">
+                        ${label}${escapeHtml(m.content)}
+                        <div class="chat-time">${time}</div>
+                    </div>`;
+                });
+                container.innerHTML = html;
+                container.scrollTop = container.scrollHeight;
+            } catch (e) {
+                container.innerHTML = '<div class="chat-empty">Error de conexión</div>';
+            }
+
+            if (chatAutoRefresh) clearInterval(chatAutoRefresh);
+            chatAutoRefresh = setInterval(() => abrirChat(clienteId, remitente), 10000);
+        }
+
+        function formatChatTime(ts) {
+            try {
+                const d = new Date(ts);
+                if (isNaN(d)) return ts.substring(11, 16);
+                const now = new Date();
+                if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+                return d.toLocaleDateString('es', { day: '2-digit', month: 'short' }) + ' ' + d.toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' });
+            } catch { return ''; }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text || '';
+            return div.innerHTML;
+        }
+
+        // Hook into client selector to also load conversations
+        const _origCargarDatos = cargarDatosCliente;
+        cargarDatosCliente = async function() {
+            await _origCargarDatos();
+            cargarConversaciones();
+        };
 
         inicializarDashboard();
     </script>

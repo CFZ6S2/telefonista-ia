@@ -17,6 +17,7 @@
         <div class="container-fluid px-4">
             <a class="navbar-brand" href="#">🤖 Telefonista IA | Dashboard Comercial</a>
             <div class="d-flex align-items-center">
+                <input type="password" id="inputAdminKey" class="form-control form-control-sm me-2" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)">
                 <button class="btn btn-sm btn-outline-success me-3" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
                 <span class="text-light me-2">Empresa:</span>
                 <select id="selectCliente" class="form-select form-select-sm" style="width: 240px;" onchange="cargarDatosCliente()">
@@ -191,6 +192,8 @@
         let LISTA_CLIENTES_API = [];
 
         async function inicializarDashboard() {
+            const savedKey = localStorage.getItem('telefonista_admin_key') || '';
+            if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
             try {
                 const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`);
                 if (res.ok) {
@@ -266,9 +269,13 @@
             };
 
             try {
+                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
                 const res = await fetch(`${API_BASE}/api/v1/admin/alta-cliente`, {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': adminKey
+                    },
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();

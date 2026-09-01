@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Request
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
+from app.database import buscar_en_inventario, agendar_cita_demo, guardar_mensaje_historial, obtener_historial_conversacion
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +28,8 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
             args = function_data.get("arguments", {})
 
             if name == "consultar_inventario":
-                from app.database import buscar_en_inventario
                 res = buscar_en_inventario(args.get("consulta", ""), cliente_id=cliente_id)
             elif name == "agendar_cita_visita":
-                from app.database import agendar_cita_demo
                 res = agendar_cita_demo(
                     nombre=args.get("nombre", "Cliente Voz"),
                     telefono=args.get("telefono", "Voz"),
@@ -50,9 +49,17 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
         return {"results": results}
 
     transcript = body.get("transcript") or message.get("transcript")
+    caller_number = body.get("call", {}).get("customer", {}).get("number", "voz_desconocido")
+
     if transcript:
-        conversacion = [{"role": "user", "content": transcript}]
-        respuesta = procesar_mensaje_ia(conversacion, canal="voz", cliente_id=cliente_id)
+        guardar_mensaje_historial(cliente_id, caller_number, "user", transcript)
+
+        historial = obtener_historial_conversacion(cliente_id, caller_number, limite=6)
+        if not historial:
+            historial = [{"role": "user", "content": transcript}]
+
+        respuesta = procesar_mensaje_ia(historial, canal="voz", cliente_id=cliente_id)
+        guardar_mensaje_historial(cliente_id, caller_number, "assistant", respuesta)
         return {"response": respuesta}
 
     return {"status": "ok"}

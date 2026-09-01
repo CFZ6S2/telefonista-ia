@@ -16,6 +16,7 @@ except Exception as e:
 
 # Cache / Fallback en RAM
 CATALOGO_CLIENTES: Dict[str, List[Dict[str, Any]]] = {}
+CITAS_MOCK: List[Dict[str, Any]] = []
 
 def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[str, Any]]:
     """
@@ -76,7 +77,8 @@ def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo:
         except Exception as e:
             logger.error(f"Error guardando cita en Firestore: {e}")
 
-    cita["id"] = "local_temp_id"
+    cita["id"] = f"local_{len(CITAS_MOCK) + 1}"
+    CITAS_MOCK.append(cita)
     return cita
 
 def guardar_mensaje_historial(cliente_id: str, remitente: str, role: str, content: str):

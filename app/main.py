@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import os
 from app.routers import voice, whatsapp, evolution, admin_clientes
@@ -8,6 +9,19 @@ app = FastAPI(
     title="Telefonista IA API",
     description="Backend unificado para llamadas de voz y WhatsApp (Evolution API Gratis & Meta API)",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://telefonista-web-app.web.app",
+        "https://telefonista-web-app.firebaseapp.com",
+        "http://localhost:8000",
+        "http://localhost:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Registrar routers de la API

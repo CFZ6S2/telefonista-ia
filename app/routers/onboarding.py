@@ -101,6 +101,7 @@ class ConfigNegocioPayload(BaseModel):
     instrucciones_ia: Optional[str] = ""
     telefono_personal: Optional[str] = ""
     voz_asistente: Optional[str] = ""
+    ia_activa: Optional[bool] = None
 
 
 @router.get("/config/{cliente_id}")
@@ -122,6 +123,8 @@ def obtener_config_negocio(cliente_id: str):
         "instrucciones_ia": data.get("instrucciones_ia", ""),
         "telefono_personal": data.get("telefono_personal", ""),
         "voz_asistente": data.get("voz_asistente", ""),
+        "ia_activa": data.get("ia_activa", True),
+        "telefono_voz": data.get("telefono_voz", "")
     }
 
 

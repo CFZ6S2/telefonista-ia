@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Telefonista IA - Dashboard Comercial</title>
+    <link rel="icon" href="data:,">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -45,7 +46,10 @@
         <div class="container-fluid px-4">
             <a class="navbar-brand" href="#" onclick="volverAListado()">🤖 Telefonista IA | Dashboard de Administración</a>
             <div class="d-flex align-items-center">
-                <input type="password" id="inputAdminKey" class="form-control form-control-sm me-2" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)">
+                <form onsubmit="return false;" class="m-0 p-0 me-2">
+                    <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
+                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)" autocomplete="current-password">
+                </form>
                 <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
             </div>
         </div>
@@ -229,8 +233,9 @@
 
                         <div class="row g-3 mb-3 p-3 bg-light rounded">
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold text-warning-emphasis">🎙️ Teléfono de VOZ (Vapi.ai API)</label>
-                                <input type="text" id="inputTelVoz" class="form-control" placeholder="+34 900 00 00 00" required>
+                                <label class="form-label fw-bold text-warning-emphasis">🎙️ Teléfono Virtual IA (Vapi)</label>
+                                <input type="text" id="inputTelVoz" class="form-control" placeholder="Ej: +34 910 00 00 00" required>
+                                <div class="form-text" style="font-size: 11px;">El número que compras por ~3€/mes al que el cliente desvía sus llamadas.</div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label font-weight-bold text-success">💬 Teléfono de WHATSAPP (Evolution API)</label>
@@ -284,7 +289,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "http://telefonista-api.duckdns.org";
+        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
         let LISTA_CLIENTES_API = [];
 
         window.onload = function() {

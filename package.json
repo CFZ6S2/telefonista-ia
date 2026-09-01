@@ -1,0 +1,7 @@
+{
+  "name": "telefonista-ia-functions",
+  "scripts": {
+    "start": "uvicorn app.main:app --reload"
+  },
+  "dependencies": {}
+}

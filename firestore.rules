@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Lectura y escritura restringida al Backend / Cloud Functions (Admin SDK omite estas reglas)
+    match /clientes/{clienteId} {
+      allow read, write: if false; // Solo el backend por SDK Admin accede
+      
+      match /inventario/{document=**} {
+        allow read: if true; // Lectura pública opcional para catálogos
+        allow write: if false;
+      }
+      
+      match /citas/{document=**} {
+        allow read, write: if false;
+      }
+    }
+  }
+}

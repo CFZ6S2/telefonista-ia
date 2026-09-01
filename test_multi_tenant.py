@@ -5,40 +5,46 @@ import sys
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
 
-BASE_URL = "http://178.156.186.149:8089"
+BASE_URL = "http://telefonista-api.duckdns.org"
+
+def evolution_payload(text: str, remitente: str = "+34699887766"):
+    return {
+        "event": "messages.upsert",
+        "data": {
+            "key": {
+                "remoteJid": f"{remitente.lstrip('+')}@s.whatsapp.net",
+                "fromMe": False
+            },
+            "message": {
+                "conversation": text
+            }
+        }
+    }
 
 def probar_cliente(cliente_id: str, mensaje: str, nombre_empresa: str):
-    print(f"\n--- 🏬 PROBANDO CLIENTE: {nombre_empresa} (ID: {cliente_id}) ---")
-    url = f"{BASE_URL}/api/v1/whatsapp/simular"
-    payload = {
-        "cliente_id": cliente_id,
-        "mensaje": mensaje,
-        "remitente": "+34699887766"
-    }
-    headers = {"Content-Type": "application/json"}
-    
+    print(f"\n--- PROBANDO CLIENTE: {nombre_empresa} (ID: {cliente_id}) ---")
+    url = f"{BASE_URL}/api/v1/whatsapp/evolution-webhook/{cliente_id}"
+
     try:
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
+        response = requests.post(url, json=evolution_payload(mensaje), timeout=30)
         if response.status_code == 200:
             data = response.json()
-            print(f"🤖 Respuesta de la IA para {nombre_empresa}:")
-            print(data.get("respuesta_ia"))
+            print(f"Respuesta de la IA para {nombre_empresa}:")
+            print(data.get("reply", data))
         else:
             print("Error en respuesta:", response.text)
     except Exception as e:
         print(f"Error conectando al servidor: {e}")
 
 if __name__ == "__main__":
-    # Prueba 1: Cliente Inmobiliaria
     probar_cliente(
         cliente_id="cliente_demo_inmo",
         mensaje="Hola, ¿qué pisos en alquiler tenéis?",
         nombre_empresa="Agencia Inmobiliaria"
     )
-    
-    # Prueba 2: Cliente Clínica Dental
+
     probar_cliente(
         cliente_id="clinica_sonrisas",
         mensaje="Hola, ¿qué precio tiene la limpieza dental o la ortodoncia?",
-        nombre_empresa="Clínica Dental Sonrisas"
+        nombre_empresa="Clinica Dental Sonrisas"
     )

@@ -26,7 +26,7 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
         db = _get_db()
         telefono_personal = ""
         nombre_empresa = cliente_id
-        elevenlabs_voice_id = ""
+        voz_asistente = ""
         if db:
             try:
                 doc = db.collection("clientes").document(cliente_id).get()
@@ -34,7 +34,7 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
                     data = doc.to_dict()
                     telefono_personal = data.get("telefono_personal", "")
                     nombre_empresa = data.get("nombre_empresa", cliente_id)
-                    elevenlabs_voice_id = data.get("elevenlabs_voice_id", "")
+                    voz_asistente = data.get("voz_asistente", "")
             except Exception:
                 pass
 
@@ -57,16 +57,22 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
                         "message": f"Gracias por llamar a {nombre_empresa}. En este momento no estamos disponibles. Por favor, intentalo mas tarde o escribenos por WhatsApp."
                     }
                 }
-
-        if elevenlabs_voice_id:
-            return {
-                "assistant": {
-                    "voice": {
-                        "provider": "11labs",
-                        "voiceId": elevenlabs_voice_id
+        if voz_asistente:
+            VOCES = {
+                "openai_alloy": {"provider": "openai", "voiceId": "alloy"},
+                "openai_echo": {"provider": "openai", "voiceId": "echo"},
+                "openai_nova": {"provider": "openai", "voiceId": "nova"},
+                "openai_onyx": {"provider": "openai", "voiceId": "onyx"},
+                "openai_shimmer": {"provider": "openai", "voiceId": "shimmer"},
+                "openai_fable": {"provider": "openai", "voiceId": "fable"},
+            }
+            voz_config = VOCES.get(voz_asistente)
+            if voz_config:
+                return {
+                    "assistant": {
+                        "voice": voz_config
                     }
                 }
-            }
 
     if type_event == "tool-calls":
         tool_calls = message.get("toolCalls", [])

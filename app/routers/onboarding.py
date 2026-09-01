@@ -1,11 +1,10 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import logging
 import httpx
 from app.database import _get_db, _server_timestamp
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
-from app.services.voice_cloning import clonar_voz, eliminar_voz_clonada
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -101,6 +100,7 @@ class ConfigNegocioPayload(BaseModel):
     reglas: Optional[str] = ""
     instrucciones_ia: Optional[str] = ""
     telefono_personal: Optional[str] = ""
+    voz_asistente: Optional[str] = ""
 
 
 @router.get("/config/{cliente_id}")
@@ -121,6 +121,7 @@ def obtener_config_negocio(cliente_id: str):
         "reglas": data.get("reglas", ""),
         "instrucciones_ia": data.get("instrucciones_ia", ""),
         "telefono_personal": data.get("telefono_personal", ""),
+        "voz_asistente": data.get("voz_asistente", ""),
     }
 
 
@@ -140,53 +141,3 @@ def guardar_config_negocio(cliente_id: str, payload: ConfigNegocioPayload):
     except Exception as e:
         logger.error(f"Error guardando config negocio: {e}")
         raise HTTPException(status_code=500, detail="Error guardando configuracion")
-
-
-MAX_AUDIO_SIZE = 10 * 1024 * 1024  # 10MB
-
-
-@router.post("/voz/{cliente_id}")
-async def subir_voz_para_clonar(cliente_id: str, audio: UploadFile = File(...)):
-    if not settings.ELEVENLABS_API_KEY:
-        raise HTTPException(status_code=503, detail="Clonacion de voz no disponible. Falta ELEVENLABS_API_KEY.")
-
-    if audio.content_type and not audio.content_type.startswith("audio/"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser de audio (mp3, wav, m4a, etc.)")
-
-    audio_bytes = await audio.read()
-    if len(audio_bytes) > MAX_AUDIO_SIZE:
-        raise HTTPException(status_code=400, detail="El archivo es demasiado grande (max 10MB)")
-    if len(audio_bytes) < 1024:
-        raise HTTPException(status_code=400, detail="El archivo es demasiado corto")
-
-    resultado = await clonar_voz(cliente_id, audio_bytes, audio.filename or "audio.mp3")
-
-    if "error" in resultado:
-        raise HTTPException(status_code=500, detail=resultado["error"])
-
-    return resultado
-
-
-@router.delete("/voz/{cliente_id}")
-async def borrar_voz_clonada(cliente_id: str):
-    resultado = await eliminar_voz_clonada(cliente_id)
-    if "error" in resultado:
-        raise HTTPException(status_code=500, detail=resultado["error"])
-    return resultado
-
-
-@router.get("/voz/{cliente_id}")
-def estado_voz_clonada(cliente_id: str):
-    db = _get_db()
-    if not db:
-        raise HTTPException(status_code=503, detail="Base de datos no disponible")
-    doc = db.collection("clientes").document(cliente_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    data = doc.to_dict()
-    voice_id = data.get("elevenlabs_voice_id", "")
-    return {
-        "cliente_id": cliente_id,
-        "tiene_voz_clonada": bool(voice_id),
-        "voice_id": voice_id
-    }

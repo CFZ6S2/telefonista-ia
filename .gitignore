@@ -1,0 +1,13 @@
+# Entorno virtual
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Archivos de entorno y claves privadas
+.env
+*.db
+*.log
+
+# Archivos temporales de test
+test_deepseek.py

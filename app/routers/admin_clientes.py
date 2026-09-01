@@ -3,8 +3,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from firebase_admin import firestore
-from app.database import db, CATALOGO_CLIENTES
+from app.database import _get_db, _server_timestamp, CATALOGO_CLIENTES
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
 from app.services.vapi_manager import crear_o_vincular_asistente_vapi
 from app.config import settings
@@ -13,7 +12,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Autenticación por Header API Key opcional/segura
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def verificar_admin_api_key(api_key: str = Depends(API_KEY_HEADER)):
@@ -39,17 +37,12 @@ class CrearClientePayload(BaseModel):
 
 @router.post("/alta-cliente", dependencies=[Depends(verificar_admin_api_key)])
 async def dar_de_alta_cliente(payload: CrearClientePayload):
-    """
-    Da de alta al cliente en Firestore y conecta automáticamente Evolution API y Vapi.ai.
-    """
     cliente_id = payload.cliente_id.lower().replace(" ", "_")
     items_dict = [item.model_dump() for item in payload.inventario]
-    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "http://178.156.186.149:8089")
+    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "https://telefonista-api.duckdns.org")
 
-    # A. Conexión automática con Evolution API (WhatsApp)
     res_evolution = await crear_instancia_evolution_y_conectar_webhook(cliente_id, vps_base_url)
 
-    # B. Conexión automática con Vapi.ai (Voz)
     res_vapi = await crear_o_vincular_asistente_vapi(
         cliente_id=cliente_id,
         nombre_empresa=payload.nombre_empresa,
@@ -57,7 +50,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         vapi_api_key=payload.vapi_api_key
     )
 
-    # C. Guardar en Firebase Firestore
+    db = _get_db()
     if db:
         try:
             doc_ref = db.collection("clientes").document(cliente_id)
@@ -67,12 +60,12 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
                 "telefono_whatsapp": payload.telefono_whatsapp,
                 "vapi_status": res_vapi,
                 "evolution_status": res_evolution.get("status"),
-                "creado_el": firestore.SERVER_TIMESTAMP
+                "creado_el": _server_timestamp()
             })
 
             for item in items_dict:
                 doc_ref.collection("inventario").add(item)
-                
+
             logger.info(f"[Firebase Firestore] Cliente {cliente_id} registrado.")
         except Exception as e:
             logger.error(f"Error guardando en Firestore: {e}")
@@ -81,7 +74,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
 
     return {
         "status": "success",
-        "message": f"Cliente '{payload.nombre_empresa}' dado de alta y CONECTADO automáticamente a WhatsApp y Vapi.",
+        "message": f"Cliente '{payload.nombre_empresa}' dado de alta y CONECTADO automaticamente a WhatsApp y Vapi.",
         "cliente_id": cliente_id,
         "evolution_whatsapp": res_evolution,
         "vapi_voz": res_vapi,
@@ -91,12 +84,12 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
 
 @router.get("/qr-whatsapp/{cliente_id}")
 async def ver_qr_whatsapp(cliente_id: str):
-    """Obtiene el QR de WhatsApp en vivo desde Evolution API."""
     data = await obtener_qr_instancia_evolution(cliente_id)
     return data
 
 @router.get("/lista-clientes")
 def listar_clientes():
+    db = _get_db()
     if db:
         try:
             docs = db.collection("clientes").stream()

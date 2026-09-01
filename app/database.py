@@ -1,30 +1,44 @@
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 import logging
-from firebase_admin import firestore
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Intentar obtener cliente de Firestore desde Firebase Admin SDK
-try:
-    import firebase_admin
-    db = firestore.client() if firebase_admin._apps else None
-except Exception as e:
-    logger.warning(f"Firestore Client no disponible: {e}")
-    db = None
+_db = None
+_db_initialized = False
+_firestore_mod = None
+
+def _get_db():
+    global _db, _db_initialized, _firestore_mod
+    if _db_initialized:
+        return _db
+    _db_initialized = True
+    try:
+        import firebase_admin
+        if firebase_admin._apps:
+            from firebase_admin import firestore as fs
+            _firestore_mod = fs
+            _db = fs.client()
+            logger.info("Firestore Client conectado correctamente.")
+        else:
+            logger.warning("Firebase Admin SDK no inicializado. Usando fallback en RAM.")
+    except Exception as e:
+        logger.warning(f"Firestore Client no disponible: {e}. Usando fallback en RAM.")
+    return _db
+
+def _server_timestamp():
+    if _firestore_mod:
+        return _firestore_mod.SERVER_TIMESTAMP
+    return datetime.now().isoformat()
 
 # Cache / Fallback en RAM
 CATALOGO_CLIENTES: Dict[str, List[Dict[str, Any]]] = {}
 CITAS_MOCK: List[Dict[str, Any]] = []
 
 def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[str, Any]]:
-    """
-    Busca productos/servicios leyendo DIRECTAMENTE de Firestore (colección 'clientes/{cliente_id}/inventario').
-    Si Firestore no responde o no está disponible, cae a RAM local.
-    """
     query_lower = query.lower()
     resultados = []
+    db = _get_db()
 
     if db:
         try:
@@ -44,20 +58,17 @@ def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[s
         except Exception as e:
             logger.error(f"Error consultando inventario en Firestore para {cliente_id}: {e}")
 
-    # Fallback local
     cat_cliente = CATALOGO_CLIENTES.get(cliente_id, [])
     for item in cat_cliente:
-        if (query_lower in item.get("nombre", "").lower() or 
-            query_lower in item.get("categoria", "").lower() or 
+        if (query_lower in item.get("nombre", "").lower() or
+            query_lower in item.get("categoria", "").lower() or
             query_lower in item.get("detalles", "").lower()):
             resultados.append(item)
 
     return resultados if resultados else cat_cliente
 
 def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo: str, cliente_id: str = "default") -> Dict[str, Any]:
-    """
-    Persiste la cita DIRECTAMENTE en Firestore en la subcolección 'clientes/{cliente_id}/citas'.
-    """
+    db = _get_db()
     cita = {
         "cliente_id": cliente_id,
         "nombre": nombre,
@@ -65,7 +76,7 @@ def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo:
         "fecha": fecha,
         "hora": hora,
         "motivo": motivo,
-        "creado_el": firestore.SERVER_TIMESTAMP if db else datetime.now().isoformat()
+        "creado_el": _server_timestamp()
     }
 
     if db:
@@ -82,9 +93,7 @@ def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo:
     return cita
 
 def guardar_mensaje_historial(cliente_id: str, remitente: str, role: str, content: str):
-    """
-    Guarda cada mensaje en el historial conversacional en Firestore ('clientes/{cliente_id}/conversaciones/{remitente}/mensajes').
-    """
+    db = _get_db()
     if not db:
         return
     try:
@@ -94,38 +103,36 @@ def guardar_mensaje_historial(cliente_id: str, remitente: str, role: str, conten
         msg_ref.add({
             "role": role,
             "content": content,
-            "timestamp": firestore.SERVER_TIMESTAMP
+            "timestamp": _server_timestamp()
         })
     except Exception as e:
         logger.error(f"Error guardando historial conversacional en Firestore: {e}")
 
 def obtener_historial_conversacion(cliente_id: str, remitente: str, limite: int = 10) -> List[Dict[str, str]]:
-    """
-    Obtiene los últimos `limite` mensajes de la conversación entre el usuario y la IA.
-    """
+    db = _get_db()
     if not db:
         return []
     try:
         docs = db.collection("clientes").document(cliente_id)\
                  .collection("conversaciones").document(remitente)\
                  .collection("mensajes")\
-                 .order_by("timestamp", direction=firestore.Query.DESCENDING)\
+                 .order_by("timestamp", direction=_firestore_mod.Query.DESCENDING)\
                  .limit(limite)\
                  .stream()
-        
+
         mensajes = []
         for doc in docs:
             data = doc.to_dict()
             mensajes.append({"role": data.get("role", "user"), "content": data.get("content", "")})
-        
-        mensajes.reverse() # Reordenar cronológicamente (antiguo -> nuevo)
+
+        mensajes.reverse()
         return mensajes
     except Exception as e:
         logger.error(f"Error leyendo historial de Firestore: {e}")
         return []
 
 def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
-    """Devuelve las citas registradas en Firestore filtradas por cliente_id."""
+    db = _get_db()
     if db:
         try:
             citas = []
@@ -150,4 +157,3 @@ def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
             logger.error(f"Error leyendo citas de Firestore: {e}")
 
     return CITAS_MOCK
-

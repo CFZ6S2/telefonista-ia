@@ -1,19 +1,20 @@
 from typing import List, Dict, Any
 import logging
-from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
-try:
-    import firebase_admin
-    db = firestore.client() if firebase_admin._apps else None
-except Exception as e:
-    db = None
-
 LEADS_MOCK: List[Dict[str, Any]] = []
 
+def _get_db():
+    from app.database import _get_db as get_db
+    return get_db()
+
+def _server_timestamp():
+    from app.database import _server_timestamp as st
+    return st()
+
 def registrar_lead(nombre: str, telefono: str, canal: str, interes: str, notas: str = "", cliente_id: str = "default") -> Dict[str, Any]:
-    """Registra y persiste un lead en Firestore."""
+    db = _get_db()
     lead = {
         "cliente_id": cliente_id,
         "nombre": nombre,
@@ -21,9 +22,9 @@ def registrar_lead(nombre: str, telefono: str, canal: str, interes: str, notas: 
         "canal": canal,
         "interes": interes,
         "notas": notas,
-        "creado_el": firestore.SERVER_TIMESTAMP if db else None
+        "creado_el": _server_timestamp()
     }
-    
+
     if db:
         try:
             doc_ref = db.collection("clientes").document(cliente_id).collection("leads").add(lead)
@@ -37,7 +38,7 @@ def registrar_lead(nombre: str, telefono: str, canal: str, interes: str, notas: 
     return lead
 
 def obtener_leads(cliente_id: str = None) -> List[Dict[str, Any]]:
-    """Devuelve los leads reales consultados desde Firestore."""
+    db = _get_db()
     if db:
         try:
             leads = []
@@ -48,7 +49,6 @@ def obtener_leads(cliente_id: str = None) -> List[Dict[str, Any]]:
                     d["id"] = doc.id
                     leads.append(d)
             else:
-                # Consultar en todos los clientes
                 cliente_docs = db.collection("clientes").stream()
                 for c_doc in cliente_docs:
                     sub_leads = db.collection("clientes").document(c_doc.id).collection("leads").stream()

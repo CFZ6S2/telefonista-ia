@@ -15,13 +15,25 @@ def _get_db():
     _db_initialized = True
     try:
         import firebase_admin
-        if firebase_admin._apps:
-            from firebase_admin import firestore as fs
-            _firestore_mod = fs
-            _db = fs.client()
-            logger.info("Firestore Client conectado correctamente.")
-        else:
-            logger.error("Firebase Admin SDK no inicializado. Firestore no disponible.")
+        from firebase_admin import credentials as fb_credentials
+        if not firebase_admin._apps:
+            import os
+            cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+            if cred_path and os.path.exists(cred_path):
+                cred = fb_credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+                logger.info(f"Firebase Admin SDK inicializado con credenciales: {cred_path}")
+            else:
+                try:
+                    firebase_admin.initialize_app()
+                    logger.info("Firebase Admin SDK inicializado con Application Default Credentials.")
+                except Exception:
+                    logger.error("Firebase Admin SDK no pudo inicializarse. Sin credenciales disponibles.")
+                    return _db
+        from firebase_admin import firestore as fs
+        _firestore_mod = fs
+        _db = fs.client()
+        logger.info("Firestore Client conectado correctamente.")
     except Exception as e:
         logger.error(f"Firestore Client no disponible: {e}")
     return _db

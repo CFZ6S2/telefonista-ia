@@ -81,8 +81,14 @@
             </div>
             <div class="col-md-4">
                 <div class="card card-custom p-3 bg-white text-dark">
-                    <div class="text-muted small">Estado de la IA</div>
-                    <div class="fs-2 fw-bold text-info">🟢 Operativa 24/7</div>
+                    <div class="text-muted small">Piloto Automatico IA</div>
+                    <div class="d-flex align-items-center gap-3 mt-1">
+                        <span class="fs-2 fw-bold" id="estadoIATexto">--</span>
+                        <div class="form-check form-switch fs-3 ms-auto">
+                            <input class="form-check-input" type="checkbox" id="toggleIA" onchange="toggleIA()" style="cursor:pointer; width:3em; height:1.5em;">
+                        </div>
+                    </div>
+                    <div class="text-muted small mt-1" id="estadoIASub">Selecciona empresa</div>
                 </div>
             </div>
         </div>
@@ -434,6 +440,57 @@
             document.getElementById("tablaCitas").innerHTML = htmlCitas;
         }
 
+        // ── Estado IA (Piloto Automatico) ──
+        async function cargarEstadoIA() {
+            const clienteId = document.getElementById("selectCliente").value;
+            if (!clienteId) {
+                document.getElementById("estadoIATexto").textContent = "--";
+                document.getElementById("estadoIASub").textContent = "Selecciona empresa";
+                document.getElementById("toggleIA").checked = false;
+                return;
+            }
+            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/estado-ia/${clienteId}`, { headers: { 'X-API-Key': adminKey } });
+                if (res.ok) {
+                    const data = await res.json();
+                    actualizarUIEstadoIA(data.ia_activa);
+                }
+            } catch (e) { console.warn("Error cargando estado IA:", e); }
+        }
+
+        function actualizarUIEstadoIA(activa) {
+            const texto = document.getElementById("estadoIATexto");
+            const sub = document.getElementById("estadoIASub");
+            const toggle = document.getElementById("toggleIA");
+            toggle.checked = activa;
+            if (activa) {
+                texto.textContent = "ON";
+                texto.className = "fs-2 fw-bold text-success";
+                sub.textContent = "IA respondiendo automaticamente";
+            } else {
+                texto.textContent = "OFF";
+                texto.className = "fs-2 fw-bold text-danger";
+                sub.textContent = "Modo manual - humano al control";
+            }
+        }
+
+        async function toggleIA() {
+            const clienteId = document.getElementById("selectCliente").value;
+            if (!clienteId) { alert("Selecciona una empresa primero"); return; }
+            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/admin/toggle-ia/${clienteId}`, {
+                    method: 'POST',
+                    headers: { 'X-API-Key': adminKey }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    actualizarUIEstadoIA(data.ia_activa);
+                }
+            } catch (e) { console.warn("Error toggling IA:", e); }
+        }
+
         // ── Chat en Vivo ──
         let chatAutoRefresh = null;
 
@@ -544,6 +601,7 @@
         cargarDatosCliente = async function() {
             await _origCargarDatos();
             cargarConversaciones();
+            cargarEstadoIA();
         };
 
         inicializarDashboard();

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 import httpx
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
-from app.database import obtener_historial_conversacion, guardar_mensaje_historial
+from app.database import obtener_historial_conversacion, guardar_mensaje_historial, obtener_estado_ia, cambiar_estado_ia
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -38,21 +38,28 @@ async def webhook_evolution_whatsapp(cliente_id: str, request: Request):
                 )
 
                 if text and remote_jid:
-                    # 1. Guardar mensaje del usuario en el historial conversacional en Firestore
+                    text_lower = text.strip().lower()
+                    if text_lower in ("!ia off", "/off", "!ia apagar"):
+                        cambiar_estado_ia(cliente_id, False)
+                        await enviar_mensaje_evolution_api(instance, remote_jid, "IA desactivada. Tienes el control manual. Escribe !ia on para reactivar.")
+                        return {"status": "ia_disabled"}
+                    if text_lower in ("!ia on", "/on", "!ia encender"):
+                        cambiar_estado_ia(cliente_id, True)
+                        await enviar_mensaje_evolution_api(instance, remote_jid, "IA activada y operando. Respondo a todos los mensajes automaticamente.")
+                        return {"status": "ia_enabled"}
+
                     guardar_mensaje_historial(cliente_id, remote_jid, "user", text)
 
-                    # 2. Recuperar historial reciente para mantener contexto conversacional
+                    if not obtener_estado_ia(cliente_id):
+                        logger.info(f"[IA OFF] Mensaje de {remote_jid} ignorado para {cliente_id} (modo manual)")
+                        return {"status": "ia_disabled", "number": remote_jid}
+
                     historial = obtener_historial_conversacion(cliente_id, remote_jid, limite=8)
                     if not historial:
                         historial = [{"role": "user", "content": text}]
 
-                    # 3. Procesar con DeepSeek IA
                     respuesta_ia = await procesar_mensaje_ia(historial, canal="whatsapp", cliente_id=cliente_id)
-
-                    # 4. Guardar respuesta IA en el historial conversacional
                     guardar_mensaje_historial(cliente_id, remote_jid, "assistant", respuesta_ia)
-                    
-                    # 5. ENVIAR LA RESPUESTA DE VUELTA AL USUARIO DE WHATSAPP MEDIANTE HTTP A EVOLUTION API
                     await enviar_mensaje_evolution_api(instance, remote_jid, respuesta_ia)
 
                     return {

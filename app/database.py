@@ -144,6 +144,30 @@ def obtener_historial_conversacion(cliente_id: str, remitente: str, limite: int 
         logger.error(f"Error leyendo historial de Firestore: {e}")
         return []
 
+def obtener_estado_ia(cliente_id: str) -> bool:
+    db = _get_db()
+    if not db:
+        return True
+    try:
+        doc = db.collection("clientes").document(cliente_id).get()
+        if doc.exists:
+            return doc.to_dict().get("ia_activa", True)
+        return True
+    except Exception as e:
+        logger.error(f"Error leyendo estado IA: {e}")
+        return True
+
+def cambiar_estado_ia(cliente_id: str, activa: bool):
+    db = _get_db()
+    if not db:
+        return
+    try:
+        db.collection("clientes").document(cliente_id).set(
+            {"ia_activa": activa}, merge=True
+        )
+    except Exception as e:
+        logger.error(f"Error cambiando estado IA: {e}")
+
 def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
     db = _get_db()
     if not db:

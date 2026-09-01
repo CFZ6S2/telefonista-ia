@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from app.database import _get_db, _server_timestamp, _firestore_direction
+from app.database import _get_db, _server_timestamp, _firestore_direction, obtener_estado_ia, cambiar_estado_ia
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
 from app.services.vapi_manager import crear_o_vincular_asistente_vapi
 from app.config import settings
@@ -101,6 +101,17 @@ def listar_clientes():
     except Exception as e:
         logger.error(f"Error consultando clientes en Firestore: {e}")
         return {"clientes": []}
+
+@router.get("/estado-ia/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
+def get_estado_ia(cliente_id: str):
+    return {"cliente_id": cliente_id, "ia_activa": obtener_estado_ia(cliente_id)}
+
+@router.post("/toggle-ia/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
+def toggle_ia(cliente_id: str):
+    estado_actual = obtener_estado_ia(cliente_id)
+    nuevo_estado = not estado_actual
+    cambiar_estado_ia(cliente_id, nuevo_estado)
+    return {"cliente_id": cliente_id, "ia_activa": nuevo_estado}
 
 @router.get("/conversaciones/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
 def listar_conversaciones(cliente_id: str):

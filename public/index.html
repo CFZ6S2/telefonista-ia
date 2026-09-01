@@ -10,6 +10,10 @@
         .navbar-brand { font-weight: bold; }
         .card-custom { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
 
+        /* Master-Detail views */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
         /* Chat Panel */
         .chat-container { display: flex; height: 520px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .chat-sidebar { width: 320px; min-width: 260px; background: #fff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; }
@@ -39,19 +43,51 @@
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#">🤖 Telefonista IA | Dashboard Comercial</a>
+            <a class="navbar-brand" href="#" onclick="volverAListado()">🤖 Telefonista IA | Dashboard de Administración</a>
             <div class="d-flex align-items-center">
                 <input type="password" id="inputAdminKey" class="form-control form-control-sm me-2" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)">
-                <button class="btn btn-sm btn-outline-success me-3" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
-                <span class="text-light me-2">Empresa:</span>
-                <select id="selectCliente" class="form-select form-select-sm" style="width: 240px;" onchange="cargarDatosCliente()">
-                    <option value="">Cargando empresas desde la API...</option>
-                </select>
+                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
             </div>
         </div>
     </nav>
 
-    <div class="container my-4">
+    <!-- VISTA 1: LISTADO DE CLIENTES (MASTER) -->
+    <div class="container my-4 view-section active" id="viewListadoClientes">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0">🏢 Directorio de Empresas</h3>
+            <button class="btn btn-primary" onclick="inicializarDashboard()">↻ Actualizar Lista</button>
+        </div>
+        
+        <div class="card card-custom bg-white">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre de Empresa</th>
+                            <th>ID Cliente</th>
+                            <th>WhatsApp</th>
+                            <th>IA</th>
+                            <th class="text-end">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tablaDirectorio">
+                        <tr><td colspan="5" class="text-center text-muted p-4">Cargando clientes...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- VISTA 2: DETALLES DEL CLIENTE (DETAIL) -->
+    <div class="container my-4 view-section" id="viewDetalleCliente">
+        
+        <div class="mb-3">
+            <button class="btn btn-outline-dark btn-sm fw-bold" onclick="volverAListado()">🔙 Volver al Directorio</button>
+            <h2 class="d-inline-block ms-3 mb-0 align-middle" id="headerNombreCliente">Cargando...</h2>
+        </div>
+
+        <input type="hidden" id="currentClienteId" value="">
+
         <!-- Tarjeta de Teléfonos y Estado de Conexión -->
         <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 card-custom p-3 bg-white border border-info-subtle text-dark">
             <div>
@@ -62,6 +98,7 @@
                 <span class="fw-bold me-2">💬 WHATSAPP (Evolution API):</span> 
                 <span id="numWhatsappCliente" class="badge bg-secondary fs-6">Sin configurar</span>
                 <button class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarQRWhatsapp()">📲 Ver / Escanear QR</button>
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copiarEnlaceCliente(document.getElementById('currentClienteId').value)">🔗 Copiar Enlace Cliente</button>
             </div>
         </div>
 
@@ -81,14 +118,14 @@
             </div>
             <div class="col-md-4">
                 <div class="card card-custom p-3 bg-white text-dark">
-                    <div class="text-muted small">Piloto Automatico IA</div>
+                    <div class="text-muted small">Piloto Automático IA</div>
                     <div class="d-flex align-items-center gap-3 mt-1">
                         <span class="fs-2 fw-bold" id="estadoIATexto">--</span>
                         <div class="form-check form-switch fs-3 ms-auto">
                             <input class="form-check-input" type="checkbox" id="toggleIA" onchange="toggleIA()" style="cursor:pointer; width:3em; height:1.5em;">
                         </div>
                     </div>
-                    <div class="text-muted small mt-1" id="estadoIASub">Selecciona empresa</div>
+                    <div class="text-muted small mt-1" id="estadoIASub">Cargando...</div>
                 </div>
             </div>
         </div>
@@ -109,7 +146,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tablaLeads">
-                                <tr><td colspan="4" class="text-center text-muted">Selecciona una empresa para ver leads</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -131,7 +168,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tablaCitas">
-                                <tr><td colspan="4" class="text-center text-muted">Selecciona una empresa para ver citas</td></tr>
+                                <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -149,7 +186,7 @@
                             <button class="btn btn-sm btn-outline-light float-end py-0 px-2" onclick="cargarConversaciones()" title="Refrescar">↻</button>
                         </div>
                         <div class="chat-contact-list" id="chatContactList">
-                            <div class="text-center text-muted p-4" style="font-size:13px;">Selecciona una empresa para ver chats</div>
+                            <div class="text-center text-muted p-4" style="font-size:13px;">Cargando chats...</div>
                         </div>
                     </div>
                     <div class="chat-main">
@@ -250,9 +287,16 @@
         const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "http://telefonista-api.duckdns.org";
         let LISTA_CLIENTES_API = [];
 
+        window.onload = function() {
+            inicializarDashboard();
+        };
+
         async function inicializarDashboard() {
             const savedKey = localStorage.getItem('telefonista_admin_key') || '';
             if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
+            
+            document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Cargando empresas...</td></tr>';
+            
             try {
                 const adminKey = localStorage.getItem('telefonista_admin_key') || '';
                 const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`, {
@@ -261,36 +305,91 @@
                 if (res.ok) {
                     const data = await res.json();
                     LISTA_CLIENTES_API = data.clientes || [];
-                    poblarSelectorClientes(LISTA_CLIENTES_API);
+                    
+                    // Also try to fetch the IA status for each client to display in the master view if possible
+                    // For now we'll just display a simplified view
+                    poblarTablaDirectorio(LISTA_CLIENTES_API);
+                } else {
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error cargando clientes. Verifica tu API Key.</td></tr>';
                 }
             } catch (err) {
                 console.warn("No se pudieron cargar clientes desde API:", err);
-                document.getElementById("selectCliente").innerHTML = `<option value="">-- No hay empresas registradas --</option>`;
+                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error de conexión con el servidor.</td></tr>';
             }
         }
 
-        function poblarSelectorClientes(clientes) {
-            const select = document.getElementById("selectCliente");
+        function poblarTablaDirectorio(clientes) {
+            const tbody = document.getElementById("tablaDirectorio");
             if (clientes.length === 0) {
-                select.innerHTML = `<option value="">-- No hay empresas registradas --</option>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-4">-- No hay empresas registradas --</td></tr>`;
                 return;
             }
 
-            let html = `<option value="">-- Selecciona una empresa --</option>`;
+            let html = ``;
             clientes.forEach(c => {
                 const id = typeof c === 'string' ? c : c.cliente_id;
                 const nombre = typeof c === 'string' ? c : (c.nombre_empresa || c.cliente_id);
-                html += `<option value="${id}">${nombre}</option>`;
+                const iaActiva = c.ia_activa !== undefined ? c.ia_activa : true;
+                const iaBadge = iaActiva
+                    ? '<span class="badge bg-success">ON</span>'
+                    : '<span class="badge bg-danger">OFF</span>';
+                const whatsapp = c.telefono_whatsapp || c.telefono_personal || '';
+                const whatsappDisplay = whatsapp
+                    ? `<span class="small">${escapeHtml(whatsapp)}</span>`
+                    : '<span class="text-muted small">--</span>';
+                const nombreSafe = escapeHtml(nombre);
+                html += `
+                    <tr>
+                        <td class="fw-bold">${nombreSafe}</td>
+                        <td class="text-muted font-monospace small">${id}</td>
+                        <td>${whatsappDisplay}</td>
+                        <td>${iaBadge}</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="copiarEnlaceCliente('${id}')" title="Copiar enlace config">🔗</button>
+                            <button class="btn btn-sm btn-primary" onclick="abrirDetalleCliente('${id}', '${nombreSafe}')">👁️ Ver</button>
+                        </td>
+                    </tr>
+                `;
             });
-            select.innerHTML = html;
+            tbody.innerHTML = html;
+        }
+
+        function abrirDetalleCliente(clienteId, nombreEmpresa) {
+            document.getElementById('viewListadoClientes').classList.remove('active');
+            document.getElementById('viewDetalleCliente').classList.add('active');
+            
+            document.getElementById('currentClienteId').value = clienteId;
+            document.getElementById('headerNombreCliente').textContent = nombreEmpresa;
+            
+            cargarDatosCliente();
+            cargarEstadoIA();
+            cargarConversaciones();
+        }
+
+        function volverAListado() {
+            document.getElementById('viewDetalleCliente').classList.remove('active');
+            document.getElementById('viewListadoClientes').classList.add('active');
+            
+            if (chatAutoRefresh) {
+                clearInterval(chatAutoRefresh);
+                chatAutoRefresh = null;
+            }
+        }
+
+        function copiarEnlaceCliente(clienteId) {
+            if (!clienteId) return;
+            const url = window.location.protocol + "//" + window.location.host + "/dashboard/mi-negocio.html?id=" + clienteId;
+            navigator.clipboard.writeText(url).then(() => {
+                alert("Enlace copiado correctamente:\n" + url);
+            }).catch(err => {
+                console.error("Error copiando", err);
+                alert("Tu navegador no permite copiar automáticamente. El enlace es:\n" + url);
+            });
         }
 
         async function mostrarQRWhatsapp() {
-            const clienteId = document.getElementById("selectCliente").value;
-            if (!clienteId) {
-                alert("Por favor selecciona una empresa primero.");
-                return;
-            }
+            const clienteId = document.getElementById("currentClienteId").value;
+            if (!clienteId) return;
 
             try {
                 const adminKey = localStorage.getItem('telefonista_admin_key') || '';
@@ -349,25 +448,22 @@
                 alert(`⚡ CLIENTE REGISTRADO LOCALMENTE\n\nNombre: ${nombreEmpresa}`);
             }
 
-            // Recargar selector desde la API real
-            await inicializarDashboard();
-            document.getElementById("selectCliente").value = clienteId;
-
             const modalEl = document.getElementById('modalAltaCliente');
             const modal = bootstrap.Modal.getInstance(modalEl);
             modal.hide();
 
-            cargarDatosCliente();
+            // Recargar lista y abrir detalles
+            await inicializarDashboard();
+            abrirDetalleCliente(clienteId, nombreEmpresa);
         }
 
         async function cargarDatosCliente() {
-            const clienteId = document.getElementById("selectCliente").value;
-            if (!clienteId) {
-                document.getElementById("numVozCliente").innerText = "Sin configurar";
-                document.getElementById("numWhatsappCliente").innerText = "Sin configurar";
-                renderizarTablas([], []);
-                return;
-            }
+            const clienteId = document.getElementById("currentClienteId").value;
+            if (!clienteId) return;
+
+            // TODO: Podríamos setear los teléfonos consultando a Firestore, 
+            // por ahora en el original se mostraba "Sin configurar" porque no había un endpoint directo que los trajera.
+            // document.getElementById("numVozCliente").innerText = "...";
 
             try {
                 const adminKey = localStorage.getItem('telefonista_admin_key') || '';
@@ -404,7 +500,7 @@
 
             let htmlLeads = "";
             if (leads.length === 0) {
-                htmlLeads = `<tr><td colspan="4" class="text-center text-muted">No hay leads registrados aún</td></tr>`;
+                htmlLeads = `<tr><td colspan="5" class="text-center text-muted">No hay leads registrados aún</td></tr>`;
             } else {
                 leads.forEach(lead => {
                     const canalBadge = lead.canal === 'voz' ? 
@@ -424,7 +520,7 @@
 
             let htmlCitas = "";
             if (citas.length === 0) {
-                htmlCitas = `<tr><td colspan="4" class="text-center text-muted">No hay citas agendadas aún</td></tr>`;
+                htmlCitas = `<tr><td colspan="5" class="text-center text-muted">No hay citas agendadas aún</td></tr>`;
             } else {
                 citas.forEach(cita => {
                     htmlCitas += `
@@ -442,13 +538,8 @@
 
         // ── Estado IA (Piloto Automatico) ──
         async function cargarEstadoIA() {
-            const clienteId = document.getElementById("selectCliente").value;
-            if (!clienteId) {
-                document.getElementById("estadoIATexto").textContent = "--";
-                document.getElementById("estadoIASub").textContent = "Selecciona empresa";
-                document.getElementById("toggleIA").checked = false;
-                return;
-            }
+            const clienteId = document.getElementById("currentClienteId").value;
+            if (!clienteId) return;
             const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
                 const res = await fetch(`${API_BASE}/api/v1/admin/estado-ia/${clienteId}`, { headers: { 'X-API-Key': adminKey } });
@@ -476,8 +567,8 @@
         }
 
         async function toggleIA() {
-            const clienteId = document.getElementById("selectCliente").value;
-            if (!clienteId) { alert("Selecciona una empresa primero"); return; }
+            const clienteId = document.getElementById("currentClienteId").value;
+            if (!clienteId) return;
             const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
                 const res = await fetch(`${API_BASE}/api/v1/admin/toggle-ia/${clienteId}`, {
@@ -495,12 +586,9 @@
         let chatAutoRefresh = null;
 
         async function cargarConversaciones() {
-            const clienteId = document.getElementById("selectCliente").value;
+            const clienteId = document.getElementById("currentClienteId").value;
             const container = document.getElementById("chatContactList");
-            if (!clienteId) {
-                container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Selecciona una empresa para ver chats</div>';
-                return;
-            }
+            if (!clienteId) return;
             const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
                 const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}`, {
@@ -596,15 +684,6 @@
             return div.innerHTML;
         }
 
-        // Hook into client selector to also load conversations
-        const _origCargarDatos = cargarDatosCliente;
-        cargarDatosCliente = async function() {
-            await _origCargarDatos();
-            cargarConversaciones();
-            cargarEstadoIA();
-        };
-
-        inicializarDashboard();
     </script>
 </body>
 </html>

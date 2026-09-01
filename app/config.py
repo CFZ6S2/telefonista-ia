@@ -11,7 +11,6 @@ class Settings(BaseSettings):
     VPS_PUBLIC_URL: str = "http://telefonista-api.duckdns.org"
     VAPI_API_KEY: str = ""
     ADMIN_SECRET_KEY: str = ""
-    ELEVENLABS_API_KEY: str = ""
 
     WHATSAPP_TOKEN: str = "tu_token_de_meta_whatsapp"
     WHATSAPP_PHONE_NUMBER_ID: str = "tu_phone_number_id_de_meta"

@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any
 from openai import OpenAI
 from app.config import settings
-from app.database import buscar_en_inventario, agendar_cita_demo
+from app.database import buscar_en_inventario, agendar_cita
 from app.services.crm import registrar_lead
 
 logger = logging.getLogger(__name__)
@@ -100,7 +100,7 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
     Procesa una conversación con DeepSeek aislando datos por cliente_id.
     """
     if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek"]:
-        return "Hola, soy el asistente comercial. (Simulación: configura tu DEEPSEEK_API_KEY en tu .env para responder)."
+        raise ValueError("OPENAI_API_KEY no configurada. Configura tu DEEPSEEK_API_KEY en .env")
 
     prompt_sistema = SYSTEM_PROMPT_VOICE if canal == "voz" else SYSTEM_PROMPT_WHATSAPP
     mensajes_con_system = [{"role": "system", "content": prompt_sistema}] + mensajes
@@ -135,7 +135,7 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
                         cliente_id=cliente_id
                     )
                 elif function_name == "agendar_cita_visita":
-                    resultado = agendar_cita_demo(
+                    resultado = agendar_cita(
                         nombre=function_args.get("nombre", "Cliente"),
                         telefono=function_args.get("telefono", "No especificado"),
                         fecha=function_args.get("fecha", ""),

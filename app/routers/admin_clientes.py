@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
 import logging
-from app.database import _get_db, _server_timestamp, CATALOGO_CLIENTES
+from app.database import _get_db, _server_timestamp
 from app.services.evolution_manager import crear_instancia_evolution_y_conectar_webhook, obtener_qr_instancia_evolution
 from app.services.vapi_manager import crear_o_vincular_asistente_vapi
 from app.config import settings
@@ -39,7 +39,7 @@ class CrearClientePayload(BaseModel):
 async def dar_de_alta_cliente(payload: CrearClientePayload):
     cliente_id = payload.cliente_id.lower().replace(" ", "_")
     items_dict = [item.model_dump() for item in payload.inventario]
-    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "https://telefonista-api.duckdns.org")
+    vps_base_url = getattr(settings, "VPS_PUBLIC_URL", "http://telefonista-api.duckdns.org")
 
     res_evolution = await crear_instancia_evolution_y_conectar_webhook(cliente_id, vps_base_url)
 
@@ -66,15 +66,15 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
             for item in items_dict:
                 doc_ref.collection("inventario").add(item)
 
-            logger.info(f"[Firebase Firestore] Cliente {cliente_id} registrado.")
+            logger.info(f"[Firestore] Cliente {cliente_id} registrado.")
         except Exception as e:
             logger.error(f"Error guardando en Firestore: {e}")
-
-    CATALOGO_CLIENTES[cliente_id] = items_dict
+    else:
+        raise HTTPException(status_code=503, detail="Firestore no disponible. No se pudo registrar el cliente.")
 
     return {
         "status": "success",
-        "message": f"Cliente '{payload.nombre_empresa}' dado de alta y CONECTADO automaticamente a WhatsApp y Vapi.",
+        "message": f"Cliente '{payload.nombre_empresa}' dado de alta y conectado a WhatsApp y Vapi.",
         "cliente_id": cliente_id,
         "evolution_whatsapp": res_evolution,
         "vapi_voz": res_vapi,
@@ -90,13 +90,12 @@ async def ver_qr_whatsapp(cliente_id: str):
 @router.get("/lista-clientes")
 def listar_clientes():
     db = _get_db()
-    if db:
-        try:
-            docs = db.collection("clientes").stream()
-            clientes = [{"cliente_id": doc.id, **doc.to_dict()} for doc in docs]
-            if clientes:
-                return {"clientes": clientes}
-        except Exception as e:
-            logger.error(f"Error consultando clientes en Firestore: {e}")
-
-    return {"clientes": list(CATALOGO_CLIENTES.keys())}
+    if not db:
+        return {"clientes": []}
+    try:
+        docs = db.collection("clientes").stream()
+        clientes = [{"cliente_id": doc.id, **doc.to_dict()} for doc in docs]
+        return {"clientes": clientes}
+    except Exception as e:
+        logger.error(f"Error consultando clientes en Firestore: {e}")
+        return {"clientes": []}

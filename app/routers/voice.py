@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
-from app.database import buscar_en_inventario, agendar_cita_demo, guardar_mensaje_historial, obtener_historial_conversacion
+from app.database import buscar_en_inventario, agendar_cita, guardar_mensaje_historial, obtener_historial_conversacion
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
             if name == "consultar_inventario":
                 res = buscar_en_inventario(args.get("consulta", ""), cliente_id=cliente_id)
             elif name == "agendar_cita_visita":
-                res = agendar_cita_demo(
+                res = agendar_cita(
                     nombre=args.get("nombre", "Cliente Voz"),
                     telefono=args.get("telefono", "Voz"),
                     fecha=args.get("fecha", ""),

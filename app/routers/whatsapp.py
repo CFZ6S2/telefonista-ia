@@ -13,7 +13,7 @@ router = APIRouter()
 class WhatsAppMessagePayload(BaseModel):
     mensaje: str
     remitente: str
-    cliente_id: Optional[str] = "cliente_demo_inmo"
+    cliente_id: str
 
 @router.get("/webhook")
 def verificar_webhook(
@@ -55,8 +55,8 @@ async def recibir_mensaje_whatsapp(request: Request):
     return {"status": "event_received"}
 
 async def enviar_mensaje_whatsapp(to_phone: str, text: str):
-    if settings.WHATSAPP_TOKEN == "tu_token_de_meta_whatsapp":
-        logger.info(f"[Simulación WhatsApp Send to {to_phone}]: {text}")
+    if not settings.WHATSAPP_TOKEN or settings.WHATSAPP_TOKEN == "tu_token_de_meta_whatsapp":
+        logger.error(f"[Meta WhatsApp] WHATSAPP_TOKEN no configurado. Mensaje no enviado a {to_phone}")
         return
 
     url = f"https://graph.facebook.com/v18.0/{settings.WHATSAPP_PHONE_NUMBER_ID}/messages"
@@ -75,13 +75,3 @@ async def enviar_mensaje_whatsapp(to_phone: str, text: str):
         response = await client.post(url, json=payload, headers=headers)
         logger.info(f"[Meta API Status]: {response.status_code} - {response.text}")
 
-@router.post("/simular")
-def simular_chat(payload: WhatsAppMessagePayload):
-    conversacion = [{"role": "user", "content": payload.mensaje}]
-    respuesta_ia = procesar_mensaje_ia(conversacion, canal="whatsapp", cliente_id=payload.cliente_id)
-    return {
-        "cliente_id": payload.cliente_id,
-        "remitente": payload.remitente,
-        "pregunta": payload.mensaje,
-        "respuesta_ia": respuesta_ia
-    }

@@ -11,14 +11,10 @@ async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, 
     Crea automáticamente un Asistente de Voz en Vapi.ai apuntando su Server URL 
     al webhook dinámico del cliente (/api/v1/voice/webhook/{cliente_id}).
     """
-    key = vapi_api_key or getattr(settings, "VAPI_API_KEY", "tu_vapi_api_key")
-    if key == "tu_vapi_api_key":
-        logger.info(f"[Vapi Auto-Connect Simulación] Asistente listo para {cliente_id}")
-        return {
-            "status": "simulation",
-            "assistant_name": f"Telefonista - {nombre_empresa}",
-            "server_url": f"{webhook_base_url}/api/v1/voice/webhook/{cliente_id}"
-        }
+    key = vapi_api_key or getattr(settings, "VAPI_API_KEY", "")
+    if not key:
+        logger.error(f"[Vapi] VAPI_API_KEY no configurada. No se puede crear asistente para {cliente_id}")
+        return {"status": "error", "detail": "VAPI_API_KEY no configurada en .env"}
 
     url = f"{VAPI_API_BASE}/assistant"
     headers = {

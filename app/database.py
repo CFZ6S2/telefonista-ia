@@ -21,9 +21,9 @@ def _get_db():
             _db = fs.client()
             logger.info("Firestore Client conectado correctamente.")
         else:
-            logger.warning("Firebase Admin SDK no inicializado. Usando fallback en RAM.")
+            logger.error("Firebase Admin SDK no inicializado. Firestore no disponible.")
     except Exception as e:
-        logger.warning(f"Firestore Client no disponible: {e}. Usando fallback en RAM.")
+        logger.error(f"Firestore Client no disponible: {e}")
     return _db
 
 def _server_timestamp():
@@ -31,43 +31,31 @@ def _server_timestamp():
         return _firestore_mod.SERVER_TIMESTAMP
     return datetime.now().isoformat()
 
-# Cache / Fallback en RAM
-CATALOGO_CLIENTES: Dict[str, List[Dict[str, Any]]] = {}
-CITAS_MOCK: List[Dict[str, Any]] = []
-
 def buscar_en_inventario(query: str, cliente_id: str = "default") -> List[Dict[str, Any]]:
+    db = _get_db()
+    if not db:
+        return []
+
     query_lower = query.lower()
     resultados = []
-    db = _get_db()
+    try:
+        docs = db.collection("clientes").document(cliente_id).collection("inventario").stream()
+        for doc in docs:
+            item = doc.to_dict()
+            item["id"] = doc.id
+            nombre = item.get("nombre", "").lower()
+            categoria = item.get("categoria", "").lower()
+            detalles = item.get("detalles", "").lower()
 
-    if db:
-        try:
-            docs = db.collection("clientes").document(cliente_id).collection("inventario").stream()
-            for doc in docs:
-                item = doc.to_dict()
-                item["id"] = doc.id
-                nombre = item.get("nombre", "").lower()
-                categoria = item.get("categoria", "").lower()
-                detalles = item.get("detalles", "").lower()
+            if query_lower in nombre or query_lower in categoria or query_lower in detalles:
+                resultados.append(item)
 
-                if query_lower in nombre or query_lower in categoria or query_lower in detalles:
-                    resultados.append(item)
+        return resultados
+    except Exception as e:
+        logger.error(f"Error consultando inventario en Firestore para {cliente_id}: {e}")
+        return []
 
-            if resultados:
-                return resultados
-        except Exception as e:
-            logger.error(f"Error consultando inventario en Firestore para {cliente_id}: {e}")
-
-    cat_cliente = CATALOGO_CLIENTES.get(cliente_id, [])
-    for item in cat_cliente:
-        if (query_lower in item.get("nombre", "").lower() or
-            query_lower in item.get("categoria", "").lower() or
-            query_lower in item.get("detalles", "").lower()):
-            resultados.append(item)
-
-    return resultados if resultados else cat_cliente
-
-def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo: str, cliente_id: str = "default") -> Dict[str, Any]:
+def agendar_cita(nombre: str, telefono: str, fecha: str, hora: str, motivo: str, cliente_id: str = "default") -> Dict[str, Any]:
     db = _get_db()
     cita = {
         "cliente_id": cliente_id,
@@ -79,18 +67,18 @@ def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo:
         "creado_el": _server_timestamp()
     }
 
-    if db:
-        try:
-            doc_ref = db.collection("clientes").document(cliente_id).collection("citas").add(cita)
-            cita["id"] = doc_ref[1].id
-            logger.info(f"[Firestore Cita Persistida] ID: {doc_ref[1].id} para cliente {cliente_id}")
-            return cita
-        except Exception as e:
-            logger.error(f"Error guardando cita en Firestore: {e}")
+    if not db:
+        logger.error("No se pudo agendar cita: Firestore no disponible.")
+        return {**cita, "id": "error_no_db"}
 
-    cita["id"] = f"local_{len(CITAS_MOCK) + 1}"
-    CITAS_MOCK.append(cita)
-    return cita
+    try:
+        doc_ref = db.collection("clientes").document(cliente_id).collection("citas").add(cita)
+        cita["id"] = doc_ref[1].id
+        logger.info(f"[Firestore] Cita persistida ID: {doc_ref[1].id} para cliente {cliente_id}")
+        return cita
+    except Exception as e:
+        logger.error(f"Error guardando cita en Firestore: {e}")
+        return {**cita, "id": "error"}
 
 def guardar_mensaje_historial(cliente_id: str, remitente: str, role: str, content: str):
     db = _get_db()
@@ -133,27 +121,26 @@ def obtener_historial_conversacion(cliente_id: str, remitente: str, limite: int 
 
 def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
     db = _get_db()
-    if db:
-        try:
-            citas = []
-            if cliente_id:
-                docs = db.collection("clientes").document(cliente_id).collection("citas").stream()
-                for doc in docs:
+    if not db:
+        return []
+    try:
+        citas = []
+        if cliente_id:
+            docs = db.collection("clientes").document(cliente_id).collection("citas").stream()
+            for doc in docs:
+                d = doc.to_dict()
+                d["id"] = doc.id
+                citas.append(d)
+        else:
+            cliente_docs = db.collection("clientes").stream()
+            for c_doc in cliente_docs:
+                sub_citas = db.collection("clientes").document(c_doc.id).collection("citas").stream()
+                for doc in sub_citas:
                     d = doc.to_dict()
                     d["id"] = doc.id
+                    d["cliente_id"] = c_doc.id
                     citas.append(d)
-            else:
-                cliente_docs = db.collection("clientes").stream()
-                for c_doc in cliente_docs:
-                    sub_citas = db.collection("clientes").document(c_doc.id).collection("citas").stream()
-                    for doc in sub_citas:
-                        d = doc.to_dict()
-                        d["id"] = doc.id
-                        d["cliente_id"] = c_doc.id
-                        citas.append(d)
-            if citas:
-                return citas
-        except Exception as e:
-            logger.error(f"Error leyendo citas de Firestore: {e}")
-
-    return CITAS_MOCK
+        return citas
+    except Exception as e:
+        logger.error(f"Error leyendo citas de Firestore: {e}")
+        return []

@@ -3,7 +3,7 @@
 **Fecha de entrega:** 1 de Septiembre de 2026  
 **Repositorio GitHub:** [https://github.com/CFZ6S2/telefonista-ia](https://github.com/CFZ6S2/telefonista-ia)  
 **Dashboard Web en Producción:** [https://telefonista-web-app.web.app/dashboard](https://telefonista-web-app.web.app/dashboard)  
-**Servidor VPS Producción:** `178.156.186.149:8089`  
+**Servidor VPS Producción:** `http://telefonista-api.duckdns.org` (IP: `178.156.186.149`)  
 
 ---
 

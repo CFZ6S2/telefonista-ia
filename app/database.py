@@ -1,55 +1,60 @@
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 
-# Catálogo de ejemplo más detallado con campos clave para inmobiliaria y servicios
-INVENTARIO_MOCK = [
-    {
-        "id": "INMO-001",
-        "nombre": "Piso céntrico en alquiler",
-        "categoria": "Alquiler Inmobiliario",
-        "precio": "850 €/mes",
-        "ubicacion": "Centro Ciudad, Calle Mayor 12",
-        "disponible": True,
-        "detalles": "2 habitaciones, 1 baño, amueblado, calefacción central. Se aceptan mascotas pequeñas. Fianza de 1 mes."
-    },
-    {
-        "id": "INMO-002",
-        "nombre": "Chalet unifamiliar con piscina en venta",
-        "categoria": "Venta Inmobiliaria",
-        "precio": "295.000 €",
-        "ubicacion": "Urbanización Los Olivos",
-        "disponible": True,
-        "detalles": "4 habitaciones, 3 baños, jardín de 300m2, garaje para 2 coches, piscina privada. Año construcción 2018."
-    },
-    {
-        "id": "SERV-001",
-        "nombre": "Consultoría Comercial e Implementación de IA",
-        "categoria": "Servicios Profesionales",
-        "precio": "150 €/hora",
-        "ubicacion": "Online / Remoto",
-        "disponible": True,
-        "detalles": "Asesoramiento para implementar agentes de IA en empresas, automatización de ventas por WhatsApp y voz."
-    }
-]
+# Catálogo Multi-Cliente (Indexado por cliente_id / tenant_id)
+CATALOGO_CLIENTES = {
+    "cliente_demo_inmo": [
+        {
+            "id": "INMO-001",
+            "nombre": "Piso céntrico en alquiler",
+            "categoria": "Alquiler Inmobiliario",
+            "precio": "850 €/mes",
+            "ubicacion": "Centro Ciudad, Calle Mayor 12",
+            "disponible": True,
+            "detalles": "2 habitaciones, 1 baño, amueblado, calefacción central."
+        }
+    ],
+    "clinica_sonrisas": [
+        {
+            "id": "DENT-001",
+            "nombre": "Limpieza dental ultrasónica + Blanqueamiento",
+            "categoria": "Tratamiento Dental",
+            "precio": "60 €",
+            "ubicacion": "Plaza España 4",
+            "disponible": True,
+            "detalles": "Limpieza profunda con ultrasonidos para eliminar sarro y manchas."
+        },
+        {
+            "id": "DENT-002",
+            "nombre": "Ortodoncia Invisible (Invisalign)",
+            "categoria": "Tratamiento Dental",
+            "precio": "Desde 1.900 €",
+            "ubicacion": "Plaza España 4",
+            "disponible": True,
+            "detalles": "Férulas transparentes extraíbles. Consulta de valoración gratuita."
+        }
+    ]
+}
 
 CITAS_MOCK: List[Dict[str, Any]] = []
 
-def buscar_en_inventario(query: str) -> List[Dict[str, Any]]:
-    """Busca productos o servicios por término clave en nombre, categoría o detalles."""
+def buscar_en_inventario(query: str, cliente_id: str = "cliente_demo_inmo") -> List[Dict[str, Any]]:
+    """Busca productos/servicios en el catálogo específico de un cliente/empresa."""
+    cat_cliente = CATALOGO_CLIENTES.get(cliente_id, CATALOGO_CLIENTES["cliente_demo_inmo"])
     query_lower = query.lower()
     resultados = []
-    for item in INVENTARIO_MOCK:
+    for item in cat_cliente:
         if (query_lower in item["nombre"].lower() or 
             query_lower in item["categoria"].lower() or 
-            query_lower in item["detalles"].lower() or
-            query_lower in item.get("ubicacion", "").lower()):
+            query_lower in item["detalles"].lower()):
             resultados.append(item)
-    return resultados if resultados else INVENTARIO_MOCK
+    return resultados if resultados else cat_cliente
 
-def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo: str) -> Dict[str, Any]:
-    """Agenda una cita o visita comercial para el cliente."""
+def agendar_cita_demo(nombre: str, telefono: str, fecha: str, hora: str, motivo: str, cliente_id: str = "default") -> Dict[str, Any]:
+    """Agenda cita asignada al cliente/empresa correspondiente."""
     cita = {
         "id": len(CITAS_MOCK) + 1,
+        "cliente_id": cliente_id,
         "nombre": nombre,
         "telefono": telefono,
         "fecha": fecha,

@@ -13,7 +13,6 @@ client = OpenAI(
     base_url=settings.OPENAI_BASE_URL
 )
 
-# Prompt multilingüe dinámico
 SYSTEM_PROMPT_WHATSAPP = """
 You are the official commercial AI assistant for the business attending via WhatsApp.
 
@@ -96,9 +95,9 @@ HERRAMIENTAS_IA = [
     }
 ]
 
-def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp") -> str:
+def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp", cliente_id: str = "default") -> str:
     """
-    Procesa la conversación con DeepSeek soportando detección automática multilingüe.
+    Procesa una conversación con DeepSeek aislando datos por cliente_id.
     """
     if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek"]:
         return "Hola, soy el asistente comercial. (Simulación: configura tu DEEPSEEK_API_KEY en tu .env para responder)."
@@ -125,7 +124,7 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp")
                 function_args = json.loads(tool_call.function.arguments)
 
                 if function_name == "consultar_inventario":
-                    resultado = buscar_en_inventario(function_args.get("consulta", ""))
+                    resultado = buscar_en_inventario(function_args.get("consulta", ""), cliente_id=cliente_id)
                 elif function_name == "registrar_interes_lead":
                     resultado = registrar_lead(
                         nombre=function_args.get("nombre", "Cliente"),
@@ -140,7 +139,8 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp")
                         telefono=function_args.get("telefono", "No especificado"),
                         fecha=function_args.get("fecha", ""),
                         hora=function_args.get("hora", ""),
-                        motivo=function_args.get("motivo", "")
+                        motivo=function_args.get("motivo", ""),
+                        cliente_id=cliente_id
                     )
                 else:
                     resultado = {"error": "Función no reconocida"}
@@ -161,5 +161,5 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp")
         return response_message.content
 
     except Exception as e:
-        logger.error(f"Error procesando llamada a DeepSeek API: {e}")
+        logger.error(f"Error procesando llamada a DeepSeek API para cliente {cliente_id}: {e}")
         return "Disculpa, en este momento estoy teniendo dificultades técnicas. ¿Te gustaría dejar tu número de teléfono para contactarte?"

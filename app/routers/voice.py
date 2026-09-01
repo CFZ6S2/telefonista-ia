@@ -1,34 +1,23 @@
 from fastapi import APIRouter, Request
-from pydantic import BaseModel
-from typing import Dict, Any, List, Optional
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
-from app.database import buscar_en_inventario
-from app.services.crm import registrar_lead
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-class VoiceWebhookPayload(BaseModel):
-    caller_number: Optional[str] = "Desconocido"
-    transcript: Optional[str] = ""
-    call_id: Optional[str] = None
-
-@router.post("/webhook")
-async def voice_assistant_webhook(request: Request):
+@router.post("/webhook/{cliente_id}")
+async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request):
     """
-    Webhook genérico para agentes de voz en tiempo real (Vapi.ai / Retell AI / Bland AI).
-    Recibe la transcripción parcial/total y devuelve la instrucción de respuesta o función a ejecutar.
+    Webhook multi-cliente para asistentes de voz (Vapi.ai / Retell AI).
+    URL: /api/v1/voice/webhook/clinica_sonrisas
     """
     body = await request.json()
-    logger.info(f"[Voice Payload Received]: {body}")
+    logger.info(f"[Voice Payload ({cliente_id})]: {body}")
 
-    # Ejemplo de formateo adaptable a Vapi.ai / Retell AI
     message = body.get("message", {})
     type_event = message.get("type")
 
-    # Manejo de Function Callings solicitados por Vapi/Retell
     if type_event == "tool-calls":
         tool_calls = message.get("toolCalls", [])
         results = []
@@ -38,14 +27,17 @@ async def voice_assistant_webhook(request: Request):
             args = function_data.get("arguments", {})
 
             if name == "consultar_inventario":
-                res = buscar_en_inventario(args.get("consulta", ""))
-            elif name == "registrar_interes_lead":
-                res = registrar_lead(
-                    nombre=args.get("nombre", "Llamada Voz"),
+                from app.database import buscar_en_inventario
+                res = buscar_en_inventario(args.get("consulta", ""), cliente_id=cliente_id)
+            elif name == "agendar_cita_visita":
+                from app.database import agendar_cita_demo
+                res = agendar_cita_demo(
+                    nombre=args.get("nombre", "Cliente Voz"),
                     telefono=args.get("telefono", "Voz"),
-                    canal="voz",
-                    interes=args.get("interes", ""),
-                    notas=args.get("notas", "")
+                    fecha=args.get("fecha", ""),
+                    hora=args.get("hora", ""),
+                    motivo=args.get("motivo", ""),
+                    cliente_id=cliente_id
                 )
             else:
                 res = {"status": "ok"}
@@ -57,11 +49,10 @@ async def voice_assistant_webhook(request: Request):
 
         return {"results": results}
 
-    # Procesamiento básico si nos envían una transcripción directa
     transcript = body.get("transcript") or message.get("transcript")
     if transcript:
         conversacion = [{"role": "user", "content": transcript}]
-        respuesta = procesar_mensaje_ia(conversacion, canal="voz")
+        respuesta = procesar_mensaje_ia(conversacion, canal="voz", cliente_id=cliente_id)
         return {"response": respuesta}
 
-    return {"status": "ok", "message": "Evento de voz procesado correctamente."}
+    return {"status": "ok"}

@@ -172,6 +172,12 @@
                         <div class="hint">Personalidad, tono, respuestas especificas que quieras que la IA siga</div>
                     </div>
 
+                    <div class="field">
+                        <label><span class="icon">📞</span> Telefono personal (desvio de llamadas)</label>
+                        <input type="tel" id="cfgTelefonoPersonal" placeholder="Ej: +34 612 345 678">
+                        <div class="hint">Cuando desactives la IA, las llamadas se desvian a este numero</div>
+                    </div>
+
                     <button class="btn btn-primary" id="btnGuardar" onclick="guardarConfig()">
                         Guardar Cambios
                     </button>
@@ -231,6 +237,7 @@
             document.getElementById('cfgTarifas').value = data.tarifas || '';
             document.getElementById('cfgReglas').value = data.reglas || '';
             document.getElementById('cfgInstrucciones').value = data.instrucciones_ia || '';
+            document.getElementById('cfgTelefonoPersonal').value = data.telefono_personal || '';
         }
 
         async function guardarConfig() {
@@ -248,7 +255,8 @@
                         direccion: document.getElementById('cfgDireccion').value,
                         tarifas: document.getElementById('cfgTarifas').value,
                         reglas: document.getElementById('cfgReglas').value,
-                        instrucciones_ia: document.getElementById('cfgInstrucciones').value
+                        instrucciones_ia: document.getElementById('cfgInstrucciones').value,
+                        telefono_personal: document.getElementById('cfgTelefonoPersonal').value
                     })
                 });
                 if (res.ok) {

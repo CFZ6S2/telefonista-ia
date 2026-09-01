@@ -99,6 +99,7 @@ class ConfigNegocioPayload(BaseModel):
     tarifas: Optional[str] = ""
     reglas: Optional[str] = ""
     instrucciones_ia: Optional[str] = ""
+    telefono_personal: Optional[str] = ""
 
 
 @router.get("/config/{cliente_id}")
@@ -118,6 +119,7 @@ def obtener_config_negocio(cliente_id: str):
         "tarifas": data.get("tarifas", ""),
         "reglas": data.get("reglas", ""),
         "instrucciones_ia": data.get("instrucciones_ia", ""),
+        "telefono_personal": data.get("telefono_personal", ""),
     }
 
 

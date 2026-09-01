@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     EVOLUTION_API_KEY: str = "mi_clave_api_segura_evolution"
     EVOLUTION_API_BASE: str = "http://localhost:8082"
-    VPS_PUBLIC_URL: str = "http://178.156.186.149:8089"
+    VPS_PUBLIC_URL: str = "https://telefonista-api.duckdns.org"
     VAPI_API_KEY: str = "tu_vapi_api_key"
     ADMIN_SECRET_KEY: str = "admin_secret_key_telefonista"
 

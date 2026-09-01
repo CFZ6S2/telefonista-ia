@@ -16,6 +16,7 @@ app.add_middleware(
     allow_origins=[
         "https://telefonista-web-app.web.app",
         "https://telefonista-web-app.firebaseapp.com",
+        "https://telefonista-api.duckdns.org",
         "http://localhost:8000",
         "http://localhost:3000",
     ],

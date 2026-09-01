@@ -8,7 +8,11 @@
     ],
     "rewrites": [
       {
-        "source": "**",
+        "source": "/dashboard",
+        "destination": "/dashboard.html"
+      },
+      {
+        "source": "/api/**",
         "function": "api"
       }
     ]

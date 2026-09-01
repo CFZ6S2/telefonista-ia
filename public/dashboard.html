@@ -298,16 +298,28 @@
             }
 
             try {
-                // Fetch de leads reales de la API
-                const resLeads = await fetch(`${API_BASE}/api/v1/leads`);
+                // Fetch de leads y citas reales filtradas por cliente_id desde la API
+                const [resLeads, resCitas] = await Promise.all([
+                    fetch(`${API_BASE}/api/v1/leads?cliente_id=${clienteId}`),
+                    fetch(`${API_BASE}/api/v1/citas?cliente_id=${clienteId}`)
+                ]);
+
+                let leads = [];
+                let citas = [];
+
                 if (resLeads.ok) {
-                    const data = await resLeads.json();
-                    const leadsFiltrados = (data.leads || []).filter(l => l.cliente_id === clienteId);
-                    renderizarTablas(leadsFiltrados, []);
-                    return;
+                    const dataL = await resLeads.json();
+                    leads = dataL.leads || [];
                 }
+                if (resCitas.ok) {
+                    const dataC = await resCitas.json();
+                    citas = dataC.citas || [];
+                }
+
+                renderizarTablas(leads, citas);
+                return;
             } catch (err) {
-                console.warn("Error cargando leads de la API:", err);
+                console.warn("Error cargando datos reales de la API:", err);
             }
 
             renderizarTablas([], []);

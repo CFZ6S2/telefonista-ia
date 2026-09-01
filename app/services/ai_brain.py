@@ -131,7 +131,8 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
                         telefono=function_args.get("telefono", "No especificado"),
                         canal=canal,
                         interes=function_args.get("interes", ""),
-                        notas=function_args.get("notas", "")
+                        notas=function_args.get("notas", ""),
+                        cliente_id=cliente_id
                     )
                 elif function_name == "agendar_cita_visita":
                     resultado = agendar_cita_demo(

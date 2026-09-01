@@ -25,9 +25,16 @@ def read_root():
         "documentation": "/docs"
     }
 
+from app.database import obtener_citas
+
 @app.get("/api/v1/leads")
-def listar_leads():
-    return {"leads": obtener_leads()}
+def listar_leads(cliente_id: str = None):
+    return {"leads": obtener_leads(cliente_id=cliente_id)}
+
+@app.get("/api/v1/citas")
+def listar_citas(cliente_id: str = None):
+    return {"citas": obtener_citas(cliente_id=cliente_id)}
 
 if os.path.exists("public"):
     app.mount("/dashboard", StaticFiles(directory="public", html=True), name="dashboard")
+

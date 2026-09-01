@@ -121,3 +121,31 @@ def obtener_historial_conversacion(cliente_id: str, remitente: str, limite: int 
     except Exception as e:
         logger.error(f"Error leyendo historial de Firestore: {e}")
         return []
+
+def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
+    """Devuelve las citas registradas en Firestore filtradas por cliente_id."""
+    if db:
+        try:
+            citas = []
+            if cliente_id:
+                docs = db.collection("clientes").document(cliente_id).collection("citas").stream()
+                for doc in docs:
+                    d = doc.to_dict()
+                    d["id"] = doc.id
+                    citas.append(d)
+            else:
+                cliente_docs = db.collection("clientes").stream()
+                for c_doc in cliente_docs:
+                    sub_citas = db.collection("clientes").document(c_doc.id).collection("citas").stream()
+                    for doc in sub_citas:
+                        d = doc.to_dict()
+                        d["id"] = doc.id
+                        d["cliente_id"] = c_doc.id
+                        citas.append(d)
+            if citas:
+                return citas
+        except Exception as e:
+            logger.error(f"Error leyendo citas de Firestore: {e}")
+
+    return CITAS_MOCK
+

@@ -91,3 +91,49 @@ async def verificar_estado_conexion(cliente_id: str):
         logger.error(f"Error verificando estado de {cliente_id}: {e}")
 
     return {"cliente_id": cliente_id, "state": "error", "connected": False}
+
+
+class ConfigNegocioPayload(BaseModel):
+    horario: Optional[str] = ""
+    direccion: Optional[str] = ""
+    tarifas: Optional[str] = ""
+    reglas: Optional[str] = ""
+    instrucciones_ia: Optional[str] = ""
+
+
+@router.get("/config/{cliente_id}")
+def obtener_config_negocio(cliente_id: str):
+    db = _get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    doc = db.collection("clientes").document(cliente_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    data = doc.to_dict()
+    return {
+        "cliente_id": cliente_id,
+        "nombre_empresa": data.get("nombre_empresa", ""),
+        "horario": data.get("horario", ""),
+        "direccion": data.get("direccion", ""),
+        "tarifas": data.get("tarifas", ""),
+        "reglas": data.get("reglas", ""),
+        "instrucciones_ia": data.get("instrucciones_ia", ""),
+    }
+
+
+@router.post("/config/{cliente_id}")
+def guardar_config_negocio(cliente_id: str, payload: ConfigNegocioPayload):
+    db = _get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    doc = db.collection("clientes").document(cliente_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    try:
+        db.collection("clientes").document(cliente_id).set(
+            payload.model_dump(exclude_none=True), merge=True
+        )
+        return {"status": "ok", "message": "Configuracion guardada. La IA usara estos datos a partir de ahora."}
+    except Exception as e:
+        logger.error(f"Error guardando config negocio: {e}")
+        raise HTTPException(status_code=500, detail="Error guardando configuracion")

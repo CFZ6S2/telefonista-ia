@@ -105,17 +105,32 @@ async def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "what
     Procesa una conversación con DeepSeek aislando datos por cliente_id.
     """
     nombre_empresa = cliente_id
+    config_negocio = ""
     db = _get_db()
     if db:
         try:
             doc = db.collection("clientes").document(cliente_id).get()
             if doc.exists:
-                nombre_empresa = doc.to_dict().get("nombre_empresa", cliente_id)
+                data = doc.to_dict()
+                nombre_empresa = data.get("nombre_empresa", cliente_id)
+                partes = []
+                if data.get("horario"):
+                    partes.append(f"HORARIO: {data['horario']}")
+                if data.get("direccion"):
+                    partes.append(f"UBICACION: {data['direccion']}")
+                if data.get("tarifas"):
+                    partes.append(f"TARIFAS Y PRECIOS: {data['tarifas']}")
+                if data.get("reglas"):
+                    partes.append(f"REGLAS Y CONDICIONES: {data['reglas']}")
+                if data.get("instrucciones_ia"):
+                    partes.append(f"INSTRUCCIONES ESPECIALES: {data['instrucciones_ia']}")
+                if partes:
+                    config_negocio = "\n\nBUSINESS CONFIGURATION (use this as your source of truth, NEVER invent data not listed here):\n" + "\n".join(partes)
         except Exception:
             pass
 
     prompt_base = SYSTEM_PROMPT_VOICE if canal == "voz" else SYSTEM_PROMPT_WHATSAPP
-    prompt_sistema = f"You work for '{nombre_empresa}'. {prompt_base}"
+    prompt_sistema = f"You work for '{nombre_empresa}'.{config_negocio}\n\n{prompt_base}"
     mensajes_con_system = [{"role": "system", "content": prompt_sistema}] + mensajes
 
     try:

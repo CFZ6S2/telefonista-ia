@@ -47,7 +47,7 @@ async def webhook_evolution_whatsapp(cliente_id: str, request: Request):
                         historial = [{"role": "user", "content": text}]
 
                     # 3. Procesar con DeepSeek IA
-                    respuesta_ia = procesar_mensaje_ia(historial, canal="whatsapp", cliente_id=cliente_id)
+                    respuesta_ia = await procesar_mensaje_ia(historial, canal="whatsapp", cliente_id=cliente_id)
 
                     # 4. Guardar respuesta IA en el historial conversacional
                     guardar_mensaje_historial(cliente_id, remote_jid, "assistant", respuesta_ia)

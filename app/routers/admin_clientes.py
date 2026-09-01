@@ -15,8 +15,10 @@ router = APIRouter()
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 def verificar_admin_api_key(api_key: str = Depends(API_KEY_HEADER)):
-    admin_secret = getattr(settings, "ADMIN_SECRET_KEY", None)
-    if admin_secret and api_key != admin_secret:
+    admin_secret = getattr(settings, "ADMIN_SECRET_KEY", "")
+    if not admin_secret:
+        raise HTTPException(status_code=500, detail="Server Error: ADMIN_SECRET_KEY no configurada en el servidor")
+    if api_key != admin_secret:
         raise HTTPException(status_code=401, detail="Unauthorized: Invalid Admin API Key")
     return True
 
@@ -82,12 +84,12 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         "webhook_voz_url": f"{vps_base_url}/api/v1/voice/webhook/{cliente_id}"
     }
 
-@router.get("/qr-whatsapp/{cliente_id}")
+@router.get("/qr-whatsapp/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
 async def ver_qr_whatsapp(cliente_id: str):
     data = await obtener_qr_instancia_evolution(cliente_id)
     return data
 
-@router.get("/lista-clientes")
+@router.get("/lista-clientes", dependencies=[Depends(verificar_admin_api_key)])
 def listar_clientes():
     db = _get_db()
     if not db:

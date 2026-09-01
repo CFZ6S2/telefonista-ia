@@ -1,16 +1,17 @@
 import json
 import logging
 from typing import List, Dict, Any
-from openai import OpenAI
+from openai import AsyncOpenAI
 from app.config import settings
 from app.database import buscar_en_inventario, agendar_cita, _get_db
 from app.services.crm import registrar_lead
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(
+client = AsyncOpenAI(
     api_key=settings.OPENAI_API_KEY,
-    base_url=settings.OPENAI_BASE_URL
+    base_url=settings.OPENAI_BASE_URL,
+    timeout=15.0
 )
 
 SYSTEM_PROMPT_WHATSAPP = """
@@ -99,13 +100,10 @@ HERRAMIENTAS_IA = [
     }
 ]
 
-def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp", cliente_id: str = "default") -> str:
+async def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp", cliente_id: str = "default") -> str:
     """
     Procesa una conversación con DeepSeek aislando datos por cliente_id.
     """
-    if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek"]:
-        raise ValueError("OPENAI_API_KEY no configurada. Configura tu DEEPSEEK_API_KEY en .env")
-
     nombre_empresa = cliente_id
     db = _get_db()
     if db:
@@ -121,7 +119,11 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
     mensajes_con_system = [{"role": "system", "content": prompt_sistema}] + mensajes
 
     try:
-        response = client.chat.completions.create(
+        if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek", ""]:
+            raise ValueError("OPENAI_API_KEY no configurada. Configura tu API KEY en .env")
+
+
+        response = await client.chat.completions.create(
             model=settings.DEEPSEEK_MODEL,
             messages=mensajes_con_system,
             tools=HERRAMIENTAS_IA,
@@ -168,7 +170,7 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
                     "content": json.dumps(resultado, ensure_ascii=False)
                 })
 
-            segunda_respuesta = client.chat.completions.create(
+            segunda_respuesta = await client.chat.completions.create(
                 model=settings.DEEPSEEK_MODEL,
                 messages=mensajes_con_system
             )

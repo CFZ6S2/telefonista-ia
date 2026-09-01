@@ -45,12 +45,14 @@ def read_root():
     }
 
 from app.database import obtener_citas
+from fastapi import Depends
+from app.routers.admin_clientes import verificar_admin_api_key
 
-@app.get("/api/v1/leads")
+@app.get("/api/v1/leads", dependencies=[Depends(verificar_admin_api_key)])
 def listar_leads(cliente_id: str = None):
     return {"leads": obtener_leads(cliente_id=cliente_id)}
 
-@app.get("/api/v1/citas")
+@app.get("/api/v1/citas", dependencies=[Depends(verificar_admin_api_key)])
 def listar_citas(cliente_id: str = None):
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 

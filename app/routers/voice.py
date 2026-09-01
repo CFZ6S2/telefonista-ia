@@ -13,7 +13,10 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     Webhook multi-cliente para asistentes de voz (Vapi.ai / Retell AI).
     URL: /api/v1/voice/webhook/clinica_sonrisas
     """
-    body = await request.json()
+    try:
+        body = await request.json()
+    except Exception:
+        return {"status": "error", "message": "Invalid JSON"}
     logger.info(f"[Voice Payload ({cliente_id})]: {body}")
 
     message = body.get("message", {})
@@ -58,7 +61,7 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
         if not historial:
             historial = [{"role": "user", "content": transcript}]
 
-        respuesta = procesar_mensaje_ia(historial, canal="voz", cliente_id=cliente_id)
+        respuesta = await procesar_mensaje_ia(historial, canal="voz", cliente_id=cliente_id)
         guardar_mensaje_historial(cliente_id, caller_number, "assistant", respuesta)
         return {"response": respuesta}
 

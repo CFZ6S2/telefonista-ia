@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict, Any
 from openai import OpenAI
 from app.config import settings
-from app.database import buscar_en_inventario, agendar_cita
+from app.database import buscar_en_inventario, agendar_cita, _get_db
 from app.services.crm import registrar_lead
 
 logger = logging.getLogger(__name__)
@@ -102,7 +102,18 @@ def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "whatsapp",
     if settings.OPENAI_API_KEY in ["tu_clave_de_openai", "tu_clave_de_deepseek"]:
         raise ValueError("OPENAI_API_KEY no configurada. Configura tu DEEPSEEK_API_KEY en .env")
 
-    prompt_sistema = SYSTEM_PROMPT_VOICE if canal == "voz" else SYSTEM_PROMPT_WHATSAPP
+    nombre_empresa = cliente_id
+    db = _get_db()
+    if db:
+        try:
+            doc = db.collection("clientes").document(cliente_id).get()
+            if doc.exists:
+                nombre_empresa = doc.to_dict().get("nombre_empresa", cliente_id)
+        except Exception:
+            pass
+
+    prompt_base = SYSTEM_PROMPT_VOICE if canal == "voz" else SYSTEM_PROMPT_WHATSAPP
+    prompt_sistema = f"You work for '{nombre_empresa}'. {prompt_base}"
     mensajes_con_system = [{"role": "system", "content": prompt_sistema}] + mensajes
 
     try:

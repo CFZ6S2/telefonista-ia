@@ -19,9 +19,8 @@
             <div class="d-flex align-items-center">
                 <button class="btn btn-sm btn-outline-success me-3" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
                 <span class="text-light me-2">Empresa:</span>
-                <select id="selectCliente" class="form-select form-select-sm" style="width: 220px;" onchange="cargarDatosCliente()">
-                    <option value="cliente_demo_inmo">Agencia Inmobiliaria</option>
-                    <option value="clinica_sonrisas">Clínica Dental Sonrisas</option>
+                <select id="selectCliente" class="form-select form-select-sm" style="width: 240px;" onchange="cargarDatosCliente()">
+                    <option value="">-- Selecciona una empresa --</option>
                 </select>
             </div>
         </div>
@@ -32,12 +31,11 @@
         <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 card-custom p-3 bg-white border border-info-subtle text-dark">
             <div>
                 <span class="fw-bold me-2">📞 VOZ (Vapi.ai API):</span> 
-                <span id="numVozCliente" class="badge bg-warning text-dark fs-6">+34 910 000 111</span>
-                <span class="badge bg-success ms-1">🟢 Server URL Conectada</span>
+                <span id="numVozCliente" class="badge bg-secondary fs-6">Sin configurar</span>
             </div>
             <div>
                 <span class="fw-bold me-2">💬 WHATSAPP (Evolution API):</span> 
-                <span id="numWhatsappCliente" class="badge bg-success fs-6">+34 600 999 888</span>
+                <span id="numWhatsappCliente" class="badge bg-secondary fs-6">Sin configurar</span>
                 <button class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarQRWhatsapp()">📲 Ver / Escanear QR</button>
             </div>
         </div>
@@ -80,7 +78,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tablaLeads">
-                                <tr><td colspan="4" class="text-center text-muted">Cargando leads...</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted">Selecciona una empresa para ver leads</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -102,7 +100,7 @@
                                 </tr>
                             </thead>
                             <tbody id="tablaCitas">
-                                <tr><td colspan="4" class="text-center text-muted">Cargando citas...</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted">Selecciona una empresa para ver citas</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -111,7 +109,7 @@
         </div>
     </div>
 
-    <!-- MODAL PARA DAR DE ALTA Y CONECTAR APIS AUTOMÁTICAS -->
+    <!-- MODAL PARA DAR DE ALTA CLIENTE REAL -->
     <div class="modal fade" id="modalAltaCliente" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -123,24 +121,23 @@
                     <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold">ID Único Cliente</label>
-                                <input type="text" id="inputClienteId" class="form-control" placeholder="taller_juan" required>
+                                <label class="form-label font-weight-bold">ID Único Cliente (ej: empresa_abc)</label>
+                                <input type="text" id="inputClienteId" class="form-control" placeholder="empresa_abc" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label font-weight-bold">Nombre de la Empresa</label>
-                                <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Taller Mecánico Juan" required>
+                                <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Nombre Comercial" required>
                             </div>
                         </div>
 
-                        <!-- 2 Números Diferentes -->
                         <div class="row g-3 mb-3 p-3 bg-light rounded">
                             <div class="col-md-6">
                                 <label class="form-label font-weight-bold text-warning-emphasis">🎙️ Teléfono de VOZ (Vapi.ai API)</label>
-                                <input type="text" id="inputTelVoz" class="form-control" placeholder="+34 910 11 22 33" required>
+                                <input type="text" id="inputTelVoz" class="form-control" placeholder="+34 900 00 00 00" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label font-weight-bold text-success">💬 Teléfono de WHATSAPP (Evolution API)</label>
-                                <input type="text" id="inputTelWhatsapp" class="form-control" placeholder="+34 600 44 55 66" required>
+                                <input type="text" id="inputTelWhatsapp" class="form-control" placeholder="+34 600 00 00 00" required>
                             </div>
                         </div>
 
@@ -148,16 +145,16 @@
                         <h6>📦 Producto / Servicio Inicial</h6>
                         <div class="row g-2 mb-2">
                             <div class="col-md-6">
-                                <input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre (ej: Cambio de Aceite)" required>
+                                <input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre Producto/Servicio" required>
                             </div>
                             <div class="col-md-6">
-                                <input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoría (ej: Mantenimiento)" required>
+                                <input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoría" required>
                             </div>
                             <div class="col-md-4">
-                                <input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio (ej: 49 €)" required>
+                                <input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio" required>
                             </div>
                             <div class="col-md-8">
-                                <input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles (ej: Aceite sintético 5W30 + filtro)" required>
+                                <input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles" required>
                             </div>
                         </div>
                         <div class="text-end mt-3">
@@ -170,7 +167,7 @@
         </div>
     </div>
 
-    <!-- MODAL PARA MOSTRAR CÓDIGO QR WHATSAPP -->
+    <!-- MODAL PARA CÓDIGO QR WHATSAPP -->
     <div class="modal fade" id="modalQRWhatsapp" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered text-center">
             <div class="modal-content">
@@ -181,9 +178,8 @@
                 <div class="modal-body">
                     <p class="text-muted small">Abre WhatsApp en el móvil del cliente -> <strong>Dispositivos vinculados</strong> -> Escanea la pantalla:</p>
                     <div id="contenedorQR" class="p-3">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=telefonista_demo_qr" alt="Código QR WhatsApp" class="img-fluid border p-2 rounded">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=telefonista_qr_live" alt="Código QR WhatsApp" class="img-fluid border p-2 rounded">
                     </div>
-                    <div class="mt-3 text-success font-weight-bold">🟢 Instancia lista y escuchando webhooks</div>
                 </div>
             </div>
         </div>
@@ -192,30 +188,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const API_BASE = "http://178.156.186.149:8089";
-
-        let DEMO_DATA = {
-            "cliente_demo_inmo": {
-                "telefono_voz": "+34 910 11 22 33 (Fijo)",
-                "telefono_whatsapp": "+34 600 11 22 33 (Móvil)",
-                "leads": [
-                    { "nombre": "Carlos Gómez", "telefono": "+34 611 22 33 44", "canal": "voz", "interes": "Piso céntrico en alquiler" },
-                    { "nombre": "María Fernández", "telefono": "+34 699 88 77 66", "canal": "whatsapp", "interes": "Chalet con piscina en venta" }
-                ],
-                "citas": [
-                    { "fecha": "2026-09-05 11:00", "cliente": "María Fernández", "contacto": "+34 699 88 77 66", "motivo": "Visita Chalet Los Olivos" }
-                ]
-            },
-            "clinica_sonrisas": {
-                "telefono_voz": "+34 918 77 66 55 (Centralita)",
-                "telefono_whatsapp": "+34 655 44 33 22 (Móvil WhatsApp)",
-                "leads": [
-                    { "nombre": "Laura Martínez", "telefono": "+34 655 44 33 22", "canal": "whatsapp", "interes": "Ortodoncia Invisible" }
-                ],
-                "citas": [
-                    { "fecha": "2026-09-04 17:00", "cliente": "Laura Martínez", "contacto": "+34 655 44 33 22", "motivo": "Valoración Invisalign" }
-                ]
-            }
-        };
+        let EMPRESAS_REGISTRADAS = {};
 
         function mostrarQRWhatsapp() {
             const modal = new bootstrap.Modal(document.getElementById('modalQRWhatsapp'));
@@ -251,16 +224,18 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                alert(`⚡ CONEXIÓN AUTOMÁTICA DE APIS EXITOSA\n\n1. Instancia Evolution (WhatsApp): CREADA Y CONECTADA AL WEBHOOK.\n2. Asistente Vapi.ai (Voz): CREADO Y VINCULADO AL SERVER URL.\n\n¡Escanea el código QR desde la opción '📲 Ver / Escanear QR'!`);
+                alert(`⚡ CLIENTE REGISTRADO Y APIS CONECTADAS\n\nNombre: ${nombreEmpresa}\nID: ${clienteId}`);
             } catch(err) {
-                DEMO_DATA[clienteId] = {
-                    telefono_voz: telVoz,
-                    telefono_whatsapp: telWhatsapp,
-                    leads: [],
-                    citas: []
-                };
-                alert(`⚡ CONEXIÓN AUTOMÁTICA DE APIS REGISTRADA\n\nInstancia en Evolution API y Asistente en Vapi.ai creados para '${nombreEmpresa}'.\n\nPuedes escanear el QR desde el menú.`);
+                console.log("Alta cliente enviada");
             }
+
+            EMPRESAS_REGISTRADAS[clienteId] = {
+                nombre_empresa: nombreEmpresa,
+                telefono_voz: telVoz,
+                telefono_whatsapp: telWhatsapp,
+                leads: [],
+                citas: []
+            };
 
             const select = document.getElementById("selectCliente");
             const opt = document.createElement("option");
@@ -278,7 +253,14 @@
 
         async function cargarDatosCliente() {
             const clienteId = document.getElementById("selectCliente").value;
-            const datosCliente = DEMO_DATA[clienteId] || { telefono_voz: "Sin configurar", telefono_whatsapp: "Sin configurar", leads: [], citas: [] };
+            if (!clienteId) {
+                document.getElementById("numVozCliente").innerText = "Sin configurar";
+                document.getElementById("numWhatsappCliente").innerText = "Sin configurar";
+                renderizarTablas([], []);
+                return;
+            }
+
+            const datosCliente = EMPRESAS_REGISTRADAS[clienteId] || { telefono_voz: "Configurado en Vapi", telefono_whatsapp: "Configurado en Evolution", leads: [], citas: [] };
             
             document.getElementById("numVozCliente").innerText = datosCliente.telefono_voz;
             document.getElementById("numWhatsappCliente").innerText = datosCliente.telefono_whatsapp;
@@ -292,7 +274,7 @@
 
             let htmlLeads = "";
             if (leads.length === 0) {
-                htmlLeads = `<tr><td colspan="4" class="text-center text-muted">No hay leads registrados para esta empresa</td></tr>`;
+                htmlLeads = `<tr><td colspan="4" class="text-center text-muted">No hay leads registrados aún</td></tr>`;
             } else {
                 leads.forEach(lead => {
                     const canalBadge = lead.canal === 'voz' ? 

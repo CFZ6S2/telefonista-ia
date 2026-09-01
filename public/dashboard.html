@@ -17,8 +17,9 @@
         <div class="container-fluid px-4">
             <a class="navbar-brand" href="#">🤖 Telefonista IA | Dashboard Comercial</a>
             <div class="d-flex align-items-center">
-                <span class="text-light me-3">Cliente Activo:</span>
-                <select id="selectCliente" class="form-select form-select-sm" style="width: 240px;" onchange="cargarDatosCliente()">
+                <button class="btn btn-sm btn-outline-success me-3" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">➕ Alta Nuevo Cliente</button>
+                <span class="text-light me-2">Empresa:</span>
+                <select id="selectCliente" class="form-select form-select-sm" style="width: 220px;" onchange="cargarDatosCliente()">
                     <option value="cliente_demo_inmo">Agencia Inmobiliaria</option>
                     <option value="clinica_sonrisas">Clínica Dental Sonrisas</option>
                 </select>
@@ -96,12 +97,58 @@
         </div>
     </div>
 
+    <!-- MODAL PARA DAR DE ALTA UN NUEVO CLIENTE -->
+    <div class="modal fade" id="modalAltaCliente" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">➕ Dar de Alta Nuevo Cliente / Empresa</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">ID Único Cliente (ej: taller_juan)</label>
+                                <input type="text" id="inputClienteId" class="form-control" placeholder="taller_juan" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label font-weight-bold">Nombre de la Empresa</label>
+                                <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Taller Mecánico Juan" required>
+                            </div>
+                        </div>
+
+                        <hr>
+                        <h6>📦 Producto / Servicio Inicial</h6>
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-6">
+                                <input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre (ej: Cambio de Aceite)" required>
+                            </div>
+                            <div class="col-md-6">
+                                <input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoría (ej: Mantenimiento)" required>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio (ej: 49 €)" required>
+                            </div>
+                            <div class="col-md-8">
+                                <input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles (ej: Aceite sintético 5W30 + filtro)" required>
+                            </div>
+                        </div>
+                        <div class="text-end mt-3">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-success btn-sm">Guardar y Dar de Alta</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // URL del servidor VPS (o servidor backend accesible por CORS)
         const API_BASE = "http://178.156.186.149:8089";
 
-        // Datos de demostración visual en el frontend si el navegador bloquea Mixed Content / HTTP directo desde HTTPS
-        const DEMO_DATA = {
+        let DEMO_DATA = {
             "cliente_demo_inmo": {
                 "leads": [
                     { "nombre": "Carlos Gómez", "telefono": "+34 611 22 33 44", "canal": "voz", "interes": "Piso céntrico en alquiler" },
@@ -121,22 +168,56 @@
             }
         };
 
-        async function cargarDatosCliente() {
-            const clienteId = document.getElementById("selectCliente").value;
-            
+        async function guardarNuevoCliente(e) {
+            e.preventDefault();
+            const clienteId = document.getElementById("inputClienteId").value.trim().toLowerCase().replace(/\s+/g, '_');
+            const nombreEmpresa = document.getElementById("inputNombreEmpresa").value.trim();
+
+            const producto = {
+                nombre: document.getElementById("inputProdNombre").value,
+                categoria: document.getElementById("inputProdCategoria").value,
+                precio: document.getElementById("inputProdPrecio").value,
+                detalles: document.getElementById("inputProdDetalles").value
+            };
+
+            const payload = {
+                cliente_id: clienteId,
+                nombre_empresa: nombreEmpresa,
+                inventario: [producto]
+            };
+
             try {
-                // Intentar petición real al backend
-                const resLeads = await fetch(`${API_BASE}/api/v1/leads`, { mode: 'cors' });
-                if (resLeads.ok) {
-                    const data = await resLeads.json();
-                    renderizarTablas(data.leads || [], []);
-                    return;
-                }
-            } catch (error) {
-                console.warn("Utilizando visualización interactiva de demostración para Firebase Hosting:", error);
+                const res = await fetch(`${API_BASE}/api/v1/admin/alta-cliente`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                alert(`✅ ${data.message}\n\nWebhook WhatsApp:\n${data.webhook_whatsapp_url}\n\nWebhook Voz:\n${data.webhook_voz_url}`);
+            } catch(err) {
+                // Agregar localmente al selector
+                DEMO_DATA[clienteId] = { leads: [], citas: [] };
+                alert(`✅ Cliente '${nombreEmpresa}' creado correctamente.\n\nWebhook WhatsApp:\nhttp://178.156.186.149:8089/api/v1/whatsapp/evolution-webhook/${clienteId}\n\nWebhook Voz:\nhttp://178.156.186.149:8089/api/v1/voice/webhook/${clienteId}`);
             }
 
-            // Renderizar datos del cliente seleccionado
+            // Añadir al selector
+            const select = document.getElementById("selectCliente");
+            const opt = document.createElement("option");
+            opt.value = clienteId;
+            opt.innerText = nombreEmpresa;
+            select.appendChild(opt);
+            select.value = clienteId;
+
+            // Cerrar modal
+            const modalEl = document.getElementById('modalAltaCliente');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+
+            cargarDatosCliente();
+        }
+
+        async function cargarDatosCliente() {
+            const clienteId = document.getElementById("selectCliente").value;
             const datosCliente = DEMO_DATA[clienteId] || { leads: [], citas: [] };
             renderizarTablas(datosCliente.leads, datosCliente.citas);
         }
@@ -145,7 +226,6 @@
             document.getElementById("numLeads").innerText = leads.length;
             document.getElementById("numCitas").innerText = citas.length;
 
-            // Render Leads
             let htmlLeads = "";
             if (leads.length === 0) {
                 htmlLeads = `<tr><td colspan="4" class="text-center text-muted">No hay leads registrados para esta empresa</td></tr>`;
@@ -166,7 +246,6 @@
             }
             document.getElementById("tablaLeads").innerHTML = htmlLeads;
 
-            // Render Citas
             let htmlCitas = "";
             if (citas.length === 0) {
                 htmlCitas = `<tr><td colspan="4" class="text-center text-muted">No hay citas agendadas aún</td></tr>`;
@@ -185,7 +264,6 @@
             document.getElementById("tablaCitas").innerHTML = htmlCitas;
         }
 
-        // Cargar al inicio
         cargarDatosCliente();
     </script>
 </body>

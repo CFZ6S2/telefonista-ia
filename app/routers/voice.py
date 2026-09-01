@@ -23,19 +23,22 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     type_event = message.get("type")
 
     if type_event == "assistant-request":
+        db = _get_db()
+        telefono_personal = ""
+        nombre_empresa = cliente_id
+        elevenlabs_voice_id = ""
+        if db:
+            try:
+                doc = db.collection("clientes").document(cliente_id).get()
+                if doc.exists:
+                    data = doc.to_dict()
+                    telefono_personal = data.get("telefono_personal", "")
+                    nombre_empresa = data.get("nombre_empresa", cliente_id)
+                    elevenlabs_voice_id = data.get("elevenlabs_voice_id", "")
+            except Exception:
+                pass
+
         if not obtener_estado_ia(cliente_id):
-            db = _get_db()
-            telefono_personal = ""
-            nombre_empresa = cliente_id
-            if db:
-                try:
-                    doc = db.collection("clientes").document(cliente_id).get()
-                    if doc.exists:
-                        data = doc.to_dict()
-                        telefono_personal = data.get("telefono_personal", "")
-                        nombre_empresa = data.get("nombre_empresa", cliente_id)
-                except Exception:
-                    pass
             if telefono_personal:
                 return {
                     "messageResponse": {
@@ -54,6 +57,16 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
                         "message": f"Gracias por llamar a {nombre_empresa}. En este momento no estamos disponibles. Por favor, intentalo mas tarde o escribenos por WhatsApp."
                     }
                 }
+
+        if elevenlabs_voice_id:
+            return {
+                "assistant": {
+                    "voice": {
+                        "provider": "11labs",
+                        "voiceId": elevenlabs_voice_id
+                    }
+                }
+            }
 
     if type_event == "tool-calls":
         tool_calls = message.get("toolCalls", [])

@@ -185,6 +185,43 @@
             </div>
 
             <div class="card">
+                <div class="card-header">
+                    <h1>Voz Personalizada</h1>
+                    <p>Clona la voz de tu recepcionista para que la IA suene exactamente como ella al telefono.</p>
+                </div>
+                <div class="card-body">
+                    <div id="vozEstado" style="margin-bottom: 14px;">
+                        <div id="vozNoClonada" style="display:none;">
+                            <div style="text-align:center; padding: 12px; background: var(--surface-alt); border-radius: 10px; margin-bottom: 14px;">
+                                <div style="font-size: 28px; margin-bottom: 6px;">🎙️</div>
+                                <div style="font-size: 13px; color: var(--text-secondary);">No hay voz clonada. Sube un audio de 1-2 minutos hablando de forma natural.</div>
+                            </div>
+                        </div>
+                        <div id="vozClonada" style="display:none;">
+                            <div style="text-align:center; padding: 12px; background: var(--primary-light); border-radius: 10px; margin-bottom: 14px;">
+                                <div style="font-size: 28px; margin-bottom: 6px;">✅</div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--primary);">Voz clonada activa</div>
+                                <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;">La IA usa esta voz en las llamadas telefonicas</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label><span class="icon">📁</span> Subir audio (MP3, WAV, M4A)</label>
+                        <input type="file" id="audioFile" accept="audio/*" style="font-size: 13px;">
+                        <div class="hint">Graba 1-2 minutos hablando de forma natural: saludo, servicios, horario. Maximo 10MB.</div>
+                    </div>
+
+                    <button class="btn btn-primary" id="btnClonar" onclick="clonarVoz()" style="margin-bottom: 10px;">
+                        Clonar Voz
+                    </button>
+                    <button class="btn" id="btnBorrarVoz" onclick="borrarVoz()" style="background: var(--danger); color: #fff; display: none;">
+                        Eliminar Voz Clonada
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
                 <div class="card-body" style="text-align: center; padding: 16px;">
                     <div style="font-size: 13px; color: var(--text-secondary);">
                         <strong>Comandos WhatsApp:</strong> Escribe <code style="background:var(--surface-alt);padding:2px 6px;border-radius:4px;">!ia off</code> para desactivar la IA y
@@ -238,6 +275,7 @@
             document.getElementById('cfgReglas').value = data.reglas || '';
             document.getElementById('cfgInstrucciones').value = data.instrucciones_ia || '';
             document.getElementById('cfgTelefonoPersonal').value = data.telefono_personal || '';
+            cargarEstadoVoz();
         }
 
         async function guardarConfig() {
@@ -277,6 +315,72 @@
             toast.textContent = msg;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        async function cargarEstadoVoz() {
+            if (!currentClienteId) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/voz/${currentClienteId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.tiene_voz_clonada) {
+                        document.getElementById('vozClonada').style.display = 'block';
+                        document.getElementById('vozNoClonada').style.display = 'none';
+                        document.getElementById('btnBorrarVoz').style.display = 'block';
+                    } else {
+                        document.getElementById('vozClonada').style.display = 'none';
+                        document.getElementById('vozNoClonada').style.display = 'block';
+                        document.getElementById('btnBorrarVoz').style.display = 'none';
+                    }
+                }
+            } catch (e) {}
+        }
+
+        async function clonarVoz() {
+            const fileInput = document.getElementById('audioFile');
+            if (!fileInput.files.length) {
+                showToast('Selecciona un archivo de audio primero');
+                return;
+            }
+            const btn = document.getElementById('btnClonar');
+            btn.disabled = true;
+            btn.textContent = 'Clonando voz... (puede tardar 30s)';
+
+            const formData = new FormData();
+            formData.append('audio', fileInput.files[0]);
+
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/voz/${currentClienteId}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    showToast('Voz clonada con exito. La IA ya suena como tu.');
+                    cargarEstadoVoz();
+                } else {
+                    showToast(data.detail || 'Error al clonar la voz');
+                }
+            } catch (e) {
+                showToast('Error de conexion');
+            }
+            btn.disabled = false;
+            btn.textContent = 'Clonar Voz';
+        }
+
+        async function borrarVoz() {
+            if (!confirm('¿Seguro que quieres eliminar la voz clonada? La IA volvera a usar la voz por defecto.')) return;
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/voz/${currentClienteId}`, { method: 'DELETE' });
+                if (res.ok) {
+                    showToast('Voz clonada eliminada');
+                    cargarEstadoVoz();
+                } else {
+                    showToast('Error al eliminar');
+                }
+            } catch (e) {
+                showToast('Error de conexion');
+            }
         }
 
         // Auto-acceso si viene con ?id=

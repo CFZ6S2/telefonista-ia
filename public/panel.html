@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Cliente - Telefonista IA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: #f0f2f5; color: #111827; min-height: 100vh; padding: 24px 16px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 480px; }
+        .card { background: #ffffff; border-radius: 16px; box-shadow: 0 4px 16px rgba(0,0,0,0.08); overflow: hidden; margin-bottom: 20px; }
+        .card-header { padding: 24px; border-bottom: 1px solid #e5e7eb; text-align: center; }
+        .card-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+        .card-header p { font-size: 14px; color: #6b7280; }
+        .card-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+        .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-whatsapp { background: #25d366; color: #fff; }
+        .btn-whatsapp:hover { background: #20b858; }
+        
+        .switch-container { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb; }
+        .switch-text h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+        .switch-text p { font-size: 13px; color: #6b7280; }
+        
+        .toggle-switch { position: relative; width: 60px; height: 34px; }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: #075e54; }
+        input:focus + .slider { box-shadow: 0 0 1px #075e54; }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        .loader { display: none; text-align: center; margin-top: 10px; font-size: 14px; color: #6b7280; }
+        
+        #accessPanel { display: block; }
+        #mainPanel { display: none; }
+        
+        .input-group { display: flex; flex-direction: column; gap: 10px; }
+        .input-group input { padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+        .input-group button { background: #075e54; color: white; }
+        
+        .error-msg { color: #dc3545; font-size: 14px; text-align: center; margin-bottom: 10px; display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div style="text-align: center; margin-bottom: 20px; font-size: 24px;">🤖 Telefonista IA</div>
+    
+    <!-- Login screen -->
+    <div class="card" id="accessPanel">
+        <div class="card-header">
+            <h1>Acceso de Cliente</h1>
+            <p>Introduce el código de tu negocio</p>
+        </div>
+        <div class="card-body">
+            <div class="error-msg" id="accessError">Código no válido</div>
+            <div class="input-group">
+                <input type="text" id="inputClienteId" placeholder="Ej: mi_empresa" onkeydown="if(event.key==='Enter')acceder()">
+                <button class="btn" onclick="acceder()">Entrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div class="card" id="mainPanel">
+        <div class="card-header">
+            <h1 id="empresaName">Mi Negocio</h1>
+            <p>Panel de Control Simplificado</p>
+        </div>
+        <div class="card-body">
+            
+            <div id="instruccionesDesvio" style="display:none; background:#e0f2fe; border:1px solid #bae6fd; padding:16px; border-radius:12px; color:#0369a1; text-align:center; font-size:14px; margin-bottom: 10px;">
+                <p style="margin-bottom:8px; font-weight:600;">📞 ¿Cómo desviar tus llamadas a la IA?</p>
+                <p>Marca en tu teléfono habitual este código y pulsa llamar:</p>
+                <code id="codigoDesvio" style="display:inline-block; font-size:18px; font-weight:bold; background:#fff; padding:6px 12px; border-radius:8px; margin:10px 0; border:1px solid #7dd3fc; cursor:pointer;" onclick="copiarCodigo()" title="Haz clic para copiar">**21*NUMERO#</code>
+                <p style="font-size:12px; color:#0c4a6e;">Para desactivarlo, marca <strong>##21#</strong></p>
+            </div>
+
+            <button class="btn btn-whatsapp" onclick="abrirConectar()">
+                <span>📱</span> Conectar / Actualizar WhatsApp
+            </button>
+            
+            <div class="switch-container">
+                <div class="switch-text">
+                    <h3>Estado de la IA</h3>
+                    <p id="iaStatusText">La IA está activada y respondiendo</p>
+                </div>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="iaToggle" onchange="toggleIA()">
+                    <span class="slider"></span>
+                </label>
+            </div>
+            
+            <div class="loader" id="loader">Guardando...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = window.location.origin;
+    let currentClienteId = null;
+
+    function getClienteIdFromURL() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get('id') || '';
+    }
+
+    async function acceder() {
+        const id = (document.getElementById('inputClienteId').value || '').trim().toLowerCase().replace(/\s+/g, '_');
+        if (!id) return;
+        document.getElementById('accessError').style.display = 'none';
+
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${id}`);
+            if (!res.ok) {
+                document.getElementById('accessError').style.display = 'block';
+                return;
+            }
+            const data = await res.json();
+            currentClienteId = id;
+            
+            // update UI
+            document.getElementById('accessPanel').style.display = 'none';
+            document.getElementById('mainPanel').style.display = 'block';
+            document.getElementById('empresaName').textContent = data.nombre_empresa || currentClienteId;
+            
+            const iaActiva = data.ia_activa !== false; // defaults to true
+            document.getElementById('iaToggle').checked = iaActiva;
+            updateStatusText(iaActiva);
+            
+            if (data.telefono_voz) {
+                const telSeguro = data.telefono_voz.replace(/\s+/g, '');
+                document.getElementById('instruccionesDesvio').style.display = 'block';
+                document.getElementById('codigoDesvio').textContent = `**21*${telSeguro}#`;
+            }
+
+            // update URL so they can bookmark it
+            const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?id=' + id;
+            window.history.pushState({path:newurl},'',newurl);
+
+        } catch (e) {
+            document.getElementById('accessError').textContent = 'Error de conexión';
+            document.getElementById('accessError').style.display = 'block';
+        }
+    }
+
+    function updateStatusText(isActive) {
+        document.getElementById('iaStatusText').textContent = isActive 
+            ? "La IA está activada y respondiendo" 
+            : "La IA está pausada (apagada)";
+    }
+
+    async function toggleIA() {
+        const isActive = document.getElementById('iaToggle').checked;
+        updateStatusText(isActive);
+        document.getElementById('loader').style.display = 'block';
+        
+        try {
+            await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ia_activa: isActive })
+            });
+        } catch(e) {
+            console.error(e);
+            alert("Error al guardar el estado. Inténtalo de nuevo.");
+            // revert
+            document.getElementById('iaToggle').checked = !isActive;
+            updateStatusText(!isActive);
+        }
+        document.getElementById('loader').style.display = 'none';
+    }
+
+    function abrirConectar() {
+        if(currentClienteId) {
+            window.location.href = `/conectar.html?id=${currentClienteId}`;
+        }
+    }
+
+    function copiarCodigo() {
+        const codigo = document.getElementById('codigoDesvio').textContent;
+        navigator.clipboard.writeText(codigo).then(() => {
+            alert('Código copiado: ' + codigo + '\n\nPégalo en tu aplicación de llamadas y marca como si fueras a llamar.');
+        }).catch(err => {
+            console.error('Error copiando', err);
+        });
+    }
+
+    // Auto-login
+    const preId = getClienteIdFromURL();
+    if (preId) {
+        document.getElementById('inputClienteId').value = preId;
+        acceder();
+    }
+</script>
+</body>
+</html>

@@ -10,12 +10,8 @@
         body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .navbar-brand { font-weight: bold; }
         .card-custom { border-radius: 12px; border: none; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-
-        /* Master-Detail views */
         .view-section { display: none; }
         .view-section.active { display: block; }
-
-        /* Chat Panel */
         .chat-container { display: flex; height: 520px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .chat-sidebar { width: 320px; min-width: 260px; background: #fff; border-right: 1px solid #e9ecef; display: flex; flex-direction: column; }
         .chat-sidebar-header { padding: 12px 16px; background: #075e54; color: #fff; font-weight: 600; font-size: 14px; }
@@ -27,7 +23,6 @@
         .chat-contact-name { font-weight: 600; font-size: 13px; color: #111; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-contact-preview { font-size: 12px; color: #667; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .chat-contact-time { font-size: 11px; color: #999; white-space: nowrap; }
-
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #e5ddd5; }
         .chat-main-header { padding: 12px 16px; background: #ededed; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; }
         .chat-main-header-name { font-weight: 600; font-size: 14px; }
@@ -38,19 +33,54 @@
         .chat-bubble .chat-time { font-size: 10px; color: #999; margin-top: 4px; text-align: right; }
         .chat-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #999; font-size: 14px; }
         .chat-badge-ia { font-size: 10px; color: #075e54; font-weight: 600; margin-bottom: 2px; }
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;
+        }
+        #loginBox {
+            background: #fff; border-radius: 16px; padding: 2.5rem 2rem; text-align: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15); max-width: 380px; width: 90%;
+        }
+        #loginBox h2 { font-size: 1.3rem; margin-bottom: .5rem; }
+        #loginBox p { color: #666; font-size: .9rem; margin-bottom: 1.5rem; }
+        .btn-google {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: #fff; border: 1px solid #dadce0; border-radius: 8px;
+            padding: 10px 24px; font-size: 15px; font-weight: 500; color: #3c4043;
+            cursor: pointer; transition: box-shadow .2s;
+        }
+        .btn-google:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .btn-google svg { width: 20px; height: 20px; }
+        .user-info { display: flex; align-items: center; gap: 8px; }
+        .user-avatar { width: 28px; height: 28px; border-radius: 50%; }
+        .user-name { color: #ccc; font-size: 13px; }
     </style>
 </head>
 <body>
 
+    <!-- LOGIN OVERLAY -->
+    <div id="loginOverlay" style="display:none;">
+        <div id="loginBox">
+            <h2>Telefonista IA</h2>
+            <p>Inicia sesion con tu cuenta de Google autorizada</p>
+            <button class="btn-google" onclick="loginConGoogle()">
+                <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                Iniciar sesion con Google
+            </button>
+            <div id="loginError" class="text-danger mt-3" style="display:none; font-size:.85rem;"></div>
+        </div>
+    </div>
+
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#" onclick="volverAListado()">🤖 Telefonista IA | Dashboard de Administración</a>
-            <div class="d-flex align-items-center">
-                <form onsubmit="return false;" class="m-0 p-0 me-2">
-                    <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
-                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)" autocomplete="current-password">
-                </form>
-                <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
+            <a class="navbar-brand" href="#" onclick="volverAListado()">🤖 Telefonista IA | Dashboard de Administracion</a>
+            <div class="d-flex align-items-center" id="navUserArea">
+                <span class="user-info" id="userInfo" style="display:none;">
+                    <img class="user-avatar" id="userAvatar" src="" alt="">
+                    <span class="user-name" id="userName"></span>
+                    <button class="btn btn-sm btn-outline-light ms-2" onclick="cerrarSesion()">Salir</button>
+                </span>
+                <button class="btn btn-sm btn-outline-success ms-2" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automatico</button>
             </div>
         </div>
     </nav>
@@ -61,7 +91,6 @@
             <h3 class="mb-0">🏢 Directorio de Empresas</h3>
             <button class="btn btn-primary" onclick="inicializarDashboard()">↻ Actualizar Lista</button>
         </div>
-        
         <div class="card card-custom bg-white">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
@@ -84,29 +113,23 @@
 
     <!-- VISTA 2: DETALLES DEL CLIENTE (DETAIL) -->
     <div class="container my-4 view-section" id="viewDetalleCliente">
-        
         <div class="mb-3">
             <button class="btn btn-outline-dark btn-sm fw-bold" onclick="volverAListado()">🔙 Volver al Directorio</button>
             <h2 class="d-inline-block ms-3 mb-0 align-middle" id="headerNombreCliente">Cargando...</h2>
         </div>
-
         <input type="hidden" id="currentClienteId" value="">
-
-        <!-- Tarjeta de Teléfonos y Estado de Conexión -->
         <div class="alert alert-info d-flex justify-content-between align-items-center mb-4 card-custom p-3 bg-white border border-info-subtle text-dark">
             <div>
-                <span class="fw-bold me-2">📞 VOZ (Vapi.ai API):</span> 
+                <span class="fw-bold me-2">📞 VOZ (Vapi.ai API):</span>
                 <span id="numVozCliente" class="badge bg-secondary fs-6">Sin configurar</span>
             </div>
             <div>
-                <span class="fw-bold me-2">💬 WHATSAPP (Evolution API):</span> 
+                <span class="fw-bold me-2">💬 WHATSAPP (Evolution API):</span>
                 <span id="numWhatsappCliente" class="badge bg-secondary fs-6">Sin configurar</span>
                 <button class="btn btn-sm btn-outline-primary ms-2" onclick="mostrarQRWhatsapp()">📲 Ver / Escanear QR</button>
                 <button class="btn btn-sm btn-outline-secondary ms-2" onclick="copiarEnlaceCliente(document.getElementById('currentClienteId').value)">🔗 Copiar Enlace Cliente</button>
             </div>
         </div>
-
-        <!-- Métricas Rápidas -->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="card card-custom p-3 bg-white text-dark">
@@ -122,7 +145,7 @@
             </div>
             <div class="col-md-4">
                 <div class="card card-custom p-3 bg-white text-dark">
-                    <div class="text-muted small">Piloto Automático IA</div>
+                    <div class="text-muted small">Piloto Automatico IA</div>
                     <div class="d-flex align-items-center gap-3 mt-1">
                         <span class="fs-2 fw-bold" id="estadoIATexto">--</span>
                         <div class="form-check form-switch fs-3 ms-auto">
@@ -133,54 +156,30 @@
                 </div>
             </div>
         </div>
-
         <div class="row g-4">
-            <!-- Tabla de Leads -->
             <div class="col-md-6">
                 <div class="card card-custom p-3 bg-white">
                     <h5 class="card-title mb-3">👤 Leads & Contactos Interesados</h5>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Teléfono</th>
-                                    <th>Canal</th>
-                                    <th>Interés</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaLeads">
-                                <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
-                            </tbody>
+                            <thead class="table-light"><tr><th>Nombre</th><th>Telefono</th><th>Canal</th><th>Interes</th></tr></thead>
+                            <tbody id="tablaLeads"><tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
             </div>
-
-            <!-- Tabla de Citas -->
             <div class="col-md-6">
                 <div class="card card-custom p-3 bg-white">
                     <h5 class="card-title mb-3">📅 Citas y Visitas Reservadas</h5>
                     <div class="table-responsive">
                         <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Fecha / Hora</th>
-                                    <th>Cliente</th>
-                                    <th>Contacto</th>
-                                    <th>Motivo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tablaCitas">
-                                <tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr>
-                            </tbody>
+                            <thead class="table-light"><tr><th>Fecha / Hora</th><th>Cliente</th><th>Contacto</th><th>Motivo</th></tr></thead>
+                            <tbody id="tablaCitas"><tr><td colspan="5" class="text-center text-muted">Cargando...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
-
-        <!-- Panel de Chat en Vivo -->
         <div class="mt-4">
             <div class="card card-custom bg-white p-0 overflow-hidden">
                 <div class="chat-container" id="chatPanel">
@@ -202,7 +201,7 @@
                             </div>
                         </div>
                         <div class="chat-messages" id="chatMessages">
-                            <div class="chat-empty">Selecciona un contacto para ver la conversación</div>
+                            <div class="chat-empty">Selecciona un contacto para ver la conversacion</div>
                         </div>
                     </div>
                 </div>
@@ -210,54 +209,66 @@
         </div>
     </div>
 
-    <!-- MODAL PARA DAR DE ALTA CLIENTE REAL -->
+    <!-- MODAL ALTA CLIENTE -->
     <div class="modal fade" id="modalAltaCliente" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">⚡ Alta de Cliente + Conexión Automática de APIs</h5>
+                    <h5 class="modal-title">⚡ Alta de Cliente + Conexion Automatica de APIs</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                      <!-- AI Auto-fill -->
+                      <div class="card bg-light mb-4 border-success">
+                          <div class="card-body">
+                              <h6 class="card-title text-success">✨ Rellenar con Inteligencia Artificial</h6>
+                              <p class="small text-muted mb-2">Copia y pega aquí la información, anuncio, o descripción del negocio. La IA rellenará todo el formulario automáticamente.</p>
+                              <textarea id="inputTextoMágico" class="form-control mb-2" rows="3" placeholder="Ej: Clínica Dental Sonrisas, situada en Madrid. Hacemos empastes a 50€ y blanqueamientos a 150€. Trato cercano..."></textarea>
+                              <button type="button" class="btn btn-sm btn-success w-100" id="btnProcesarIA" onclick="procesarTextoIA()">
+                                  Generar Configuración con IA
+                              </button>
+                          </div>
+                      </div>
+                      
+                      <hr>
                     <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label font-weight-bold">ID Único Cliente (ej: empresa_abc)</label>
+                            <div class="col-md-4">
+                                <label class="form-label font-weight-bold">ID Unico Cliente (ej: empresa_abc)</label>
                                 <input type="text" id="inputClienteId" class="form-control" placeholder="empresa_abc" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label font-weight-bold">Nombre de la Empresa</label>
                                 <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Nombre Comercial" required>
                             </div>
+                            <div class="col-md-4">
+                                <label class="form-label font-weight-bold">📧 Email del Cliente</label>
+                                <input type="email" id="inputEmailCliente" class="form-control" placeholder="cliente@gmail.com" required>
+                                <div class="form-text" style="font-size: 11px;">Para que el cliente acceda a su panel con Google.</div>
+                            </div>
                         </div>
-
                         <div class="row g-3 mb-3 p-3 bg-light rounded">
                             <div class="col-md-6">
-                                <label class="form-label fw-bold text-warning-emphasis">🎙️ Teléfono Virtual IA (Vapi)</label>
+                                <label class="form-label fw-bold text-warning-emphasis">🎙️ Telefono Virtual IA (Vapi)</label>
                                 <input type="text" id="inputTelVoz" class="form-control" placeholder="Ej: +34 910 00 00 00" required>
-                                <div class="form-text" style="font-size: 11px;">El número que compras por ~3€/mes al que el cliente desvía sus llamadas.</div>
+                                <div class="form-text" style="font-size: 11px;">El numero que compras por ~3eur/mes al que el cliente desvia sus llamadas.</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label font-weight-bold text-success">💬 Teléfono de WHATSAPP (Evolution API)</label>
+                                <label class="form-label font-weight-bold text-success">💬 Telefono de WHATSAPP (Evolution API)</label>
                                 <input type="text" id="inputTelWhatsapp" class="form-control" placeholder="+34 600 00 00 00" required>
                             </div>
                         </div>
-
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">🧠 Comportamiento de la IA (System Prompt)</label>
+                            <textarea id="inputSystemPrompt" class="form-control" rows="4" placeholder="Instrucciones detalladas de cómo debe actuar la IA..." required></textarea>
+                        </div>
                         <hr>
                         <h6>📦 Producto / Servicio Inicial</h6>
                         <div class="row g-2 mb-2">
-                            <div class="col-md-6">
-                                <input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre Producto/Servicio" required>
-                            </div>
-                            <div class="col-md-6">
-                                <input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoría" required>
-                            </div>
-                            <div class="col-md-4">
-                                <input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio" required>
-                            </div>
-                            <div class="col-md-8">
-                                <input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles" required>
-                            </div>
+                            <div class="col-md-6"><input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre Producto/Servicio" required></div>
+                            <div class="col-md-6"><input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoria" required></div>
+                            <div class="col-md-4"><input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio" required></div>
+                            <div class="col-md-8"><input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles" required></div>
                         </div>
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -269,18 +280,18 @@
         </div>
     </div>
 
-    <!-- MODAL PARA CÓDIGO QR WHATSAPP -->
+    <!-- MODAL QR WHATSAPP -->
     <div class="modal fade" id="modalQRWhatsapp" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered text-center">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">📲 Vincula WhatsApp con Código QR</h5>
+                    <h5 class="modal-title">📲 Vincula WhatsApp con Codigo QR</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small">Abre WhatsApp en el móvil del cliente -> <strong>Dispositivos vinculados</strong> -> Escanea la pantalla:</p>
+                    <p class="text-muted small">Abre WhatsApp en el movil del cliente -> <strong>Dispositivos vinculados</strong> -> Escanea la pantalla:</p>
                     <div id="contenedorQR" class="p-3">
-                        <img id="imgQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=telefonista_qr_live" alt="Código QR WhatsApp" class="img-fluid border p-2 rounded">
+                        <img id="imgQR" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=telefonista_qr_live" alt="Codigo QR WhatsApp" class="img-fluid border p-2 rounded">
                     </div>
                 </div>
             </div>
@@ -288,73 +299,105 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBvzPjb08kal71CYBtaEbd4NXM_ZscG24s",
+            authDomain: "telefonista-web-app.firebaseapp.com",
+            projectId: "telefonista-web-app",
+            storageBucket: "telefonista-web-app.firebasestorage.app",
+            messagingSenderId: "5745604345",
+            appId: "1:5745604345:web:ce95d46abf55183fc7d428"
+        };
+        firebase.initializeApp(firebaseConfig);
+
         const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
         let LISTA_CLIENTES_API = [];
+        let _currentIdToken = null;
 
-        window.onload = function() {
-            inicializarDashboard();
-        };
+        async function getAuthHeaders() {
+            const user = firebase.auth().currentUser;
+            if (!user) return {};
+            _currentIdToken = await user.getIdToken();
+            return { 'Authorization': 'Bearer ' + _currentIdToken };
+        }
+
+        function loginConGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).catch(err => {
+                const errorDiv = document.getElementById('loginError');
+                errorDiv.style.display = 'block';
+                if (err.code === 'auth/popup-closed-by-user') {
+                    errorDiv.textContent = 'Popup cerrado. Intentalo de nuevo.';
+                } else {
+                    errorDiv.textContent = 'Error: ' + err.message;
+                }
+            });
+        }
+
+        function cerrarSesion() {
+            firebase.auth().signOut();
+        }
+
+        firebase.auth().onAuthStateChanged(async (user) => {
+            const overlay = document.getElementById('loginOverlay');
+            const userInfo = document.getElementById('userInfo');
+            if (user) {
+                overlay.style.display = 'none';
+                document.getElementById('userAvatar').src = user.photoURL || '';
+                document.getElementById('userName').textContent = user.displayName || user.email;
+                userInfo.style.display = 'flex';
+                inicializarDashboard();
+            } else {
+                overlay.style.display = 'flex';
+                userInfo.style.display = 'none';
+                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Inicia sesion para ver las empresas.</td></tr>';
+            }
+        });
 
         async function inicializarDashboard() {
-            const savedKey = localStorage.getItem('telefonista_admin_key') || '';
-            if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
-            
+            const user = firebase.auth().currentUser;
+            if (!user) return;
+
             document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Cargando empresas...</td></tr>';
-            
+
             try {
-                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
-                const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`, {
-                    headers: { 'X-API-Key': adminKey }
-                });
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`, { headers });
                 if (res.ok) {
                     const data = await res.json();
                     LISTA_CLIENTES_API = data.clientes || [];
-                    
-                    // Also try to fetch the IA status for each client to display in the master view if possible
-                    // For now we'll just display a simplified view
                     poblarTablaDirectorio(LISTA_CLIENTES_API);
+                } else if (res.status === 403) {
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Tu cuenta (' + escapeHtml(user.email) + ') no esta autorizada como admin.</td></tr>';
+                } else if (res.status === 401) {
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Sesion expirada. Recarga la pagina.</td></tr>';
                 } else {
-                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error cargando clientes. Verifica tu API Key.</td></tr>';
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error cargando clientes (HTTP ' + res.status + ').</td></tr>';
                 }
             } catch (err) {
                 console.warn("No se pudieron cargar clientes desde API:", err);
-                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error de conexión con el servidor.</td></tr>';
+                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error de conexion con el servidor.</td></tr>';
             }
         }
 
         function poblarTablaDirectorio(clientes) {
             const tbody = document.getElementById("tablaDirectorio");
             if (clientes.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted p-4">-- No hay empresas registradas --</td></tr>`;
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">-- No hay empresas registradas --</td></tr>';
                 return;
             }
-
-            let html = ``;
+            let html = '';
             clientes.forEach(c => {
                 const id = typeof c === 'string' ? c : c.cliente_id;
                 const nombre = typeof c === 'string' ? c : (c.nombre_empresa || c.cliente_id);
                 const iaActiva = c.ia_activa !== undefined ? c.ia_activa : true;
-                const iaBadge = iaActiva
-                    ? '<span class="badge bg-success">ON</span>'
-                    : '<span class="badge bg-danger">OFF</span>';
+                const iaBadge = iaActiva ? '<span class="badge bg-success">ON</span>' : '<span class="badge bg-danger">OFF</span>';
                 const whatsapp = c.telefono_whatsapp || c.telefono_personal || '';
-                const whatsappDisplay = whatsapp
-                    ? `<span class="small">${escapeHtml(whatsapp)}</span>`
-                    : '<span class="text-muted small">--</span>';
+                const whatsappDisplay = whatsapp ? '<span class="small">' + escapeHtml(whatsapp) + '</span>' : '<span class="text-muted small">--</span>';
                 const nombreSafe = escapeHtml(nombre);
-                html += `
-                    <tr>
-                        <td class="fw-bold">${nombreSafe}</td>
-                        <td class="text-muted font-monospace small">${id}</td>
-                        <td>${whatsappDisplay}</td>
-                        <td>${iaBadge}</td>
-                        <td class="text-end">
-                            <button class="btn btn-sm btn-outline-secondary me-1" onclick="copiarEnlaceCliente('${id}')" title="Copiar enlace config">🔗</button>
-                            <button class="btn btn-sm btn-primary" onclick="abrirDetalleCliente('${id}', '${nombreSafe}')">👁️ Ver</button>
-                        </td>
-                    </tr>
-                `;
+                html += '<tr><td class="fw-bold">' + nombreSafe + '</td><td class="text-muted font-monospace small">' + id + '</td><td>' + whatsappDisplay + '</td><td>' + iaBadge + '</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary me-1" onclick="copiarEnlaceCliente(\'' + id + '\')" title="Copiar enlace config">🔗</button><button class="btn btn-sm btn-primary" onclick="abrirDetalleCliente(\'' + id + '\', \'' + nombreSafe + '\')">👁️ Ver</button></td></tr>';
             });
             tbody.innerHTML = html;
         }
@@ -362,10 +405,8 @@
         function abrirDetalleCliente(clienteId, nombreEmpresa) {
             document.getElementById('viewListadoClientes').classList.remove('active');
             document.getElementById('viewDetalleCliente').classList.add('active');
-            
             document.getElementById('currentClienteId').value = clienteId;
             document.getElementById('headerNombreCliente').textContent = nombreEmpresa;
-            
             cargarDatosCliente();
             cargarEstadoIA();
             cargarConversaciones();
@@ -374,11 +415,7 @@
         function volverAListado() {
             document.getElementById('viewDetalleCliente').classList.remove('active');
             document.getElementById('viewListadoClientes').classList.add('active');
-            
-            if (chatAutoRefresh) {
-                clearInterval(chatAutoRefresh);
-                chatAutoRefresh = null;
-            }
+            if (chatAutoRefresh) { clearInterval(chatAutoRefresh); chatAutoRefresh = null; }
         }
 
         function copiarEnlaceCliente(clienteId) {
@@ -387,77 +424,99 @@
             navigator.clipboard.writeText(url).then(() => {
                 alert("Enlace copiado correctamente:\n" + url);
             }).catch(err => {
-                console.error("Error copiando", err);
-                alert("Tu navegador no permite copiar automáticamente. El enlace es:\n" + url);
+                alert("Tu navegador no permite copiar automaticamente. El enlace es:\n" + url);
             });
         }
 
         async function mostrarQRWhatsapp() {
             const clienteId = document.getElementById("currentClienteId").value;
             if (!clienteId) return;
-
             try {
-                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
-                const res = await fetch(`${API_BASE}/api/v1/admin/qr-whatsapp/${clienteId}`, {
-                    headers: { 'X-API-Key': adminKey }
-                });
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/qr-whatsapp/${clienteId}`, { headers });
                 if (res.ok) {
                     const data = await res.json();
                     if (data.qrcode && data.qrcode.base64) {
                         document.getElementById("imgQR").src = data.qrcode.base64;
                     }
                 }
-            } catch (e) {
-                console.warn("Mostrando QR genérico");
-            }
-
+            } catch (e) { console.warn("Mostrando QR generico"); }
             const modal = new bootstrap.Modal(document.getElementById('modalQRWhatsapp'));
             modal.show();
+        }
+
+        async function procesarTextoIA() {
+            const texto = document.getElementById("inputTextoMágico").value.trim();
+            if (!texto) return alert("Pega el texto del cliente primero.");
+            
+            const btn = document.getElementById("btnProcesarIA");
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Procesando con IA...';
+            btn.disabled = true;
+            
+            try {
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/analizar-anuncio`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ texto: texto })
+                });
+                if (!res.ok) throw new Error("Error analizando el texto");
+                const data = await res.json();
+                
+                document.getElementById("inputClienteId").value = data.cliente_id || "";
+                document.getElementById("inputNombreEmpresa").value = data.nombre_empresa || "";
+                document.getElementById("inputSystemPrompt").value = data.system_prompt || "";
+                
+                if (data.inventario && data.inventario.length > 0) {
+                    const prod = data.inventario[0];
+                    document.getElementById("inputProdNombre").value = prod.nombre || "";
+                    document.getElementById("inputProdCategoria").value = prod.categoria || "";
+                    document.getElementById("inputProdPrecio").value = prod.precio || "";
+                    document.getElementById("inputProdDetalles").value = prod.detalles || "";
+                    document.getElementById("inputProdUbi").value = prod.ubicacion || "";
+                }
+                
+            } catch (err) {
+                alert("Hubo un error procesando el texto: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
         }
 
         async function guardarNuevoCliente(e) {
             e.preventDefault();
             const clienteId = document.getElementById("inputClienteId").value.trim().toLowerCase().replace(/\s+/g, '_');
             const nombreEmpresa = document.getElementById("inputNombreEmpresa").value.trim();
-            const telVoz = document.getElementById("inputTelVoz").value.trim();
-            const telWhatsapp = document.getElementById("inputTelWhatsapp").value.trim();
-
-            const producto = {
-                nombre: document.getElementById("inputProdNombre").value,
-                categoria: document.getElementById("inputProdCategoria").value,
-                precio: document.getElementById("inputProdPrecio").value,
-                detalles: document.getElementById("inputProdDetalles").value
-            };
-
+            const emailCliente = document.getElementById("inputEmailCliente").value.trim();
             const payload = {
                 cliente_id: clienteId,
                 nombre_empresa: nombreEmpresa,
-                telefono_voz: telVoz,
-                telefono_whatsapp: telWhatsapp,
-                inventario: [producto]
+                email: emailCliente,
+                telefono_voz: document.getElementById("inputTelVoz").value.trim(),
+                telefono_whatsapp: document.getElementById("inputTelWhatsapp").value.trim(),
+                system_prompt: document.getElementById("inputSystemPrompt").value.trim(),
+                inventario: [{
+                    nombre: document.getElementById("inputProdNombre").value,
+                    categoria: document.getElementById("inputProdCategoria").value,
+                    precio: document.getElementById("inputProdPrecio").value,
+                    detalles: document.getElementById("inputProdDetalles").value
+                }]
             };
-
             try {
-                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
+                const headers = await getAuthHeaders();
+                headers['Content-Type'] = 'application/json';
                 const res = await fetch(`${API_BASE}/api/v1/admin/alta-cliente`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-API-Key': adminKey
-                    },
-                    body: JSON.stringify(payload)
+                    method: 'POST', headers, body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                alert(`⚡ CLIENTE REGISTRADO EN FIRESTORE Y APIS CONECTADAS\n\nNombre: ${nombreEmpresa}\nID: ${clienteId}`);
+                alert('⚡ CLIENTE REGISTRADO\n\nNombre: ' + nombreEmpresa + '\nID: ' + clienteId);
             } catch(err) {
-                alert(`⚡ CLIENTE REGISTRADO LOCALMENTE\n\nNombre: ${nombreEmpresa}`);
+                alert('⚡ CLIENTE REGISTRADO LOCALMENTE\n\nNombre: ' + nombreEmpresa);
             }
-
             const modalEl = document.getElementById('modalAltaCliente');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
-
-            // Recargar lista y abrir detalles
+            bootstrap.Modal.getInstance(modalEl).hide();
             await inicializarDashboard();
             abrirDetalleCliente(clienteId, nombreEmpresa);
         }
@@ -465,93 +524,52 @@
         async function cargarDatosCliente() {
             const clienteId = document.getElementById("currentClienteId").value;
             if (!clienteId) return;
-
-            // TODO: Podríamos setear los teléfonos consultando a Firestore, 
-            // por ahora en el original se mostraba "Sin configurar" porque no había un endpoint directo que los trajera.
-            // document.getElementById("numVozCliente").innerText = "...";
-
             try {
-                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
-                const hdrs = { 'X-API-Key': adminKey };
+                const headers = await getAuthHeaders();
                 const [resLeads, resCitas] = await Promise.all([
-                    fetch(`${API_BASE}/api/v1/leads?cliente_id=${clienteId}`, { headers: hdrs }),
-                    fetch(`${API_BASE}/api/v1/citas?cliente_id=${clienteId}`, { headers: hdrs })
+                    fetch(`${API_BASE}/api/v1/leads?cliente_id=${clienteId}`, { headers }),
+                    fetch(`${API_BASE}/api/v1/citas?cliente_id=${clienteId}`, { headers })
                 ]);
-
-                let leads = [];
-                let citas = [];
-
-                if (resLeads.ok) {
-                    const dataL = await resLeads.json();
-                    leads = dataL.leads || [];
-                }
-                if (resCitas.ok) {
-                    const dataC = await resCitas.json();
-                    citas = dataC.citas || [];
-                }
-
+                let leads = [], citas = [];
+                if (resLeads.ok) { const d = await resLeads.json(); leads = d.leads || []; }
+                if (resCitas.ok) { const d = await resCitas.json(); citas = d.citas || []; }
                 renderizarTablas(leads, citas);
                 return;
-            } catch (err) {
-                console.warn("Error cargando datos reales de la API:", err);
-            }
-
+            } catch (err) { console.warn("Error cargando datos:", err); }
             renderizarTablas([], []);
         }
 
         function renderizarTablas(leads, citas) {
             document.getElementById("numLeads").innerText = leads.length;
             document.getElementById("numCitas").innerText = citas.length;
-
             let htmlLeads = "";
             if (leads.length === 0) {
-                htmlLeads = `<tr><td colspan="5" class="text-center text-muted">No hay leads registrados aún</td></tr>`;
+                htmlLeads = '<tr><td colspan="5" class="text-center text-muted">No hay leads registrados aun</td></tr>';
             } else {
                 leads.forEach(lead => {
-                    const canalBadge = lead.canal === 'voz' ? 
-                        '<span class="badge bg-warning text-dark">🎙️ Voz</span>' : 
-                        '<span class="badge bg-success">💬 WhatsApp</span>';
-                    htmlLeads += `
-                        <tr>
-                            <td><strong>${lead.nombre}</strong></td>
-                            <td>${lead.telefono}</td>
-                            <td>${canalBadge}</td>
-                            <td>${lead.interes}</td>
-                        </tr>
-                    `;
+                    const canalBadge = lead.canal === 'voz' ? '<span class="badge bg-warning text-dark">🎙️ Voz</span>' : '<span class="badge bg-success">💬 WhatsApp</span>';
+                    htmlLeads += '<tr><td><strong>' + lead.nombre + '</strong></td><td>' + lead.telefono + '</td><td>' + canalBadge + '</td><td>' + lead.interes + '</td></tr>';
                 });
             }
             document.getElementById("tablaLeads").innerHTML = htmlLeads;
-
             let htmlCitas = "";
             if (citas.length === 0) {
-                htmlCitas = `<tr><td colspan="5" class="text-center text-muted">No hay citas agendadas aún</td></tr>`;
+                htmlCitas = '<tr><td colspan="5" class="text-center text-muted">No hay citas agendadas aun</td></tr>';
             } else {
                 citas.forEach(cita => {
-                    htmlCitas += `
-                        <tr>
-                            <td><span class="badge bg-primary">${cita.fecha}</span></td>
-                            <td><strong>${cita.cliente}</strong></td>
-                            <td>${cita.contacto}</td>
-                            <td>${cita.motivo}</td>
-                        </tr>
-                    `;
+                    htmlCitas += '<tr><td><span class="badge bg-primary">' + cita.fecha + '</span></td><td><strong>' + cita.cliente + '</strong></td><td>' + cita.contacto + '</td><td>' + cita.motivo + '</td></tr>';
                 });
             }
             document.getElementById("tablaCitas").innerHTML = htmlCitas;
         }
 
-        // ── Estado IA (Piloto Automatico) ──
         async function cargarEstadoIA() {
             const clienteId = document.getElementById("currentClienteId").value;
             if (!clienteId) return;
-            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/estado-ia/${clienteId}`, { headers: { 'X-API-Key': adminKey } });
-                if (res.ok) {
-                    const data = await res.json();
-                    actualizarUIEstadoIA(data.ia_activa);
-                }
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/estado-ia/${clienteId}`, { headers });
+                if (res.ok) { const data = await res.json(); actualizarUIEstadoIA(data.ia_activa); }
             } catch (e) { console.warn("Error cargando estado IA:", e); }
         }
 
@@ -561,12 +579,10 @@
             const toggle = document.getElementById("toggleIA");
             toggle.checked = activa;
             if (activa) {
-                texto.textContent = "ON";
-                texto.className = "fs-2 fw-bold text-success";
+                texto.textContent = "ON"; texto.className = "fs-2 fw-bold text-success";
                 sub.textContent = "IA respondiendo automaticamente";
             } else {
-                texto.textContent = "OFF";
-                texto.className = "fs-2 fw-bold text-danger";
+                texto.textContent = "OFF"; texto.className = "fs-2 fw-bold text-danger";
                 sub.textContent = "Modo manual - humano al control";
             }
         }
@@ -574,101 +590,66 @@
         async function toggleIA() {
             const clienteId = document.getElementById("currentClienteId").value;
             if (!clienteId) return;
-            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/toggle-ia/${clienteId}`, {
-                    method: 'POST',
-                    headers: { 'X-API-Key': adminKey }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    actualizarUIEstadoIA(data.ia_activa);
-                }
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/toggle-ia/${clienteId}`, { method: 'POST', headers });
+                if (res.ok) { const data = await res.json(); actualizarUIEstadoIA(data.ia_activa); }
             } catch (e) { console.warn("Error toggling IA:", e); }
         }
 
-        // ── Chat en Vivo ──
         let chatAutoRefresh = null;
 
         async function cargarConversaciones() {
             const clienteId = document.getElementById("currentClienteId").value;
             const container = document.getElementById("chatContactList");
             if (!clienteId) return;
-            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}`, {
-                    headers: { 'X-API-Key': adminKey }
-                });
-                if (!res.ok) { container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error cargando chats (verifica API Key)</div>'; return; }
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}`, { headers });
+                if (!res.ok) { container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error cargando chats</div>'; return; }
                 const data = await res.json();
                 const convs = data.conversaciones || [];
-                if (convs.length === 0) {
-                    container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">No hay conversaciones aún</div>';
-                    return;
-                }
+                if (convs.length === 0) { container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">No hay conversaciones aun</div>'; return; }
                 let html = '';
                 convs.forEach(c => {
                     const num = c.remitente.replace('@s.whatsapp.net', '');
                     const initial = num.slice(-2);
                     const preview = c.ultimo_role === 'assistant' ? '🤖 ' + c.ultimo_mensaje : c.ultimo_mensaje;
                     const time = c.timestamp ? formatChatTime(c.timestamp) : '';
-                    html += `<div class="chat-contact" onclick="abrirChat('${clienteId}', '${c.remitente}')" data-remitente="${c.remitente}">
-                        <div class="chat-contact-avatar">${initial}</div>
-                        <div class="chat-contact-info">
-                            <div class="chat-contact-name">+${num}</div>
-                            <div class="chat-contact-preview">${escapeHtml(preview).substring(0, 60)}</div>
-                        </div>
-                        <div class="chat-contact-time">${time}</div>
-                    </div>`;
+                    html += '<div class="chat-contact" onclick="abrirChat(\'' + clienteId + '\', \'' + c.remitente + '\')" data-remitente="' + c.remitente + '"><div class="chat-contact-avatar">' + initial + '</div><div class="chat-contact-info"><div class="chat-contact-name">+' + num + '</div><div class="chat-contact-preview">' + escapeHtml(preview).substring(0, 60) + '</div></div><div class="chat-contact-time">' + time + '</div></div>';
                 });
                 container.innerHTML = html;
-            } catch (e) {
-                container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error de conexión</div>';
-            }
+            } catch (e) { container.innerHTML = '<div class="text-center text-muted p-4" style="font-size:13px;">Error de conexion</div>'; }
         }
 
         async function abrirChat(clienteId, remitente) {
             document.querySelectorAll('.chat-contact').forEach(el => el.classList.remove('active'));
-            const active = document.querySelector(`.chat-contact[data-remitente="${remitente}"]`);
+            const active = document.querySelector('.chat-contact[data-remitente="' + remitente + '"]');
             if (active) active.classList.add('active');
-
             const num = remitente.replace('@s.whatsapp.net', '');
             document.getElementById('chatMainHeader').style.display = 'flex';
             document.getElementById('chatHeaderAvatar').textContent = num.slice(-2);
             document.getElementById('chatHeaderName').textContent = '+' + num;
             document.getElementById('chatHeaderSub').textContent = clienteId;
-
             const container = document.getElementById('chatMessages');
             container.innerHTML = '<div class="chat-empty">Cargando mensajes...</div>';
-
-            const adminKey = localStorage.getItem('telefonista_admin_key') || '';
             try {
-                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}/${remitente}`, {
-                    headers: { 'X-API-Key': adminKey }
-                });
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/conversaciones/${clienteId}/${remitente}`, { headers });
                 if (!res.ok) { container.innerHTML = '<div class="chat-empty">Error cargando mensajes</div>'; return; }
                 const data = await res.json();
                 const msgs = data.mensajes || [];
-                if (msgs.length === 0) {
-                    container.innerHTML = '<div class="chat-empty">Sin mensajes</div>';
-                    return;
-                }
+                if (msgs.length === 0) { container.innerHTML = '<div class="chat-empty">Sin mensajes</div>'; return; }
                 let html = '';
                 msgs.forEach(m => {
                     const roleClass = m.role === 'assistant' ? 'assistant' : 'user';
                     const label = m.role === 'assistant' ? '<div class="chat-badge-ia">🤖 IA</div>' : '';
                     const time = m.timestamp ? formatChatTime(m.timestamp) : '';
-                    html += `<div class="chat-bubble ${roleClass}">
-                        ${label}${escapeHtml(m.content)}
-                        <div class="chat-time">${time}</div>
-                    </div>`;
+                    html += '<div class="chat-bubble ' + roleClass + '">' + label + escapeHtml(m.content) + '<div class="chat-time">' + time + '</div></div>';
                 });
                 container.innerHTML = html;
                 container.scrollTop = container.scrollHeight;
-            } catch (e) {
-                container.innerHTML = '<div class="chat-empty">Error de conexión</div>';
-            }
-
+            } catch (e) { container.innerHTML = '<div class="chat-empty">Error de conexion</div>'; }
             if (chatAutoRefresh) clearInterval(chatAutoRefresh);
             chatAutoRefresh = setInterval(() => abrirChat(clienteId, remitente), 10000);
         }
@@ -688,7 +669,6 @@
             div.textContent = text || '';
             return div.innerHTML;
         }
-
     </script>
 </body>
 </html>

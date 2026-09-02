@@ -218,6 +218,19 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                      <!-- AI Auto-fill -->
+                      <div class="card bg-light mb-4 border-success">
+                          <div class="card-body">
+                              <h6 class="card-title text-success">✨ Rellenar con Inteligencia Artificial</h6>
+                              <p class="small text-muted mb-2">Copia y pega aquí la información, anuncio, o descripción del negocio. La IA rellenará todo el formulario automáticamente.</p>
+                              <textarea id="inputTextoMágico" class="form-control mb-2" rows="3" placeholder="Ej: Clínica Dental Sonrisas, situada en Madrid. Hacemos empastes a 50€ y blanqueamientos a 150€. Trato cercano..."></textarea>
+                              <button type="button" class="btn btn-sm btn-success w-100" id="btnProcesarIA" onclick="procesarTextoIA()">
+                                  Generar Configuración con IA
+                              </button>
+                          </div>
+                      </div>
+                      
+                      <hr>
                     <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
@@ -244,6 +257,10 @@
                                 <label class="form-label font-weight-bold text-success">💬 Telefono de WHATSAPP (Evolution API)</label>
                                 <input type="text" id="inputTelWhatsapp" class="form-control" placeholder="+34 600 00 00 00" required>
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label font-weight-bold">🧠 Comportamiento de la IA (System Prompt)</label>
+                            <textarea id="inputSystemPrompt" class="form-control" rows="4" placeholder="Instrucciones detalladas de cómo debe actuar la IA..." required></textarea>
                         </div>
                         <hr>
                         <h6>📦 Producto / Servicio Inicial</h6>
@@ -428,6 +445,46 @@
             modal.show();
         }
 
+        async function procesarTextoIA() {
+            const texto = document.getElementById("inputTextoMágico").value.trim();
+            if (!texto) return alert("Pega el texto del cliente primero.");
+            
+            const btn = document.getElementById("btnProcesarIA");
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '⏳ Procesando con IA...';
+            btn.disabled = true;
+            
+            try {
+                const headers = await getAuthHeaders();
+                const res = await fetch(`${API_BASE}/api/v1/admin/analizar-anuncio`, {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({ texto: texto })
+                });
+                if (!res.ok) throw new Error("Error analizando el texto");
+                const data = await res.json();
+                
+                document.getElementById("inputClienteId").value = data.cliente_id || "";
+                document.getElementById("inputNombreEmpresa").value = data.nombre_empresa || "";
+                document.getElementById("inputSystemPrompt").value = data.system_prompt || "";
+                
+                if (data.inventario && data.inventario.length > 0) {
+                    const prod = data.inventario[0];
+                    document.getElementById("inputProdNombre").value = prod.nombre || "";
+                    document.getElementById("inputProdCategoria").value = prod.categoria || "";
+                    document.getElementById("inputProdPrecio").value = prod.precio || "";
+                    document.getElementById("inputProdDetalles").value = prod.detalles || "";
+                    document.getElementById("inputProdUbi").value = prod.ubicacion || "";
+                }
+                
+            } catch (err) {
+                alert("Hubo un error procesando el texto: " + err.message);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
         async function guardarNuevoCliente(e) {
             e.preventDefault();
             const clienteId = document.getElementById("inputClienteId").value.trim().toLowerCase().replace(/\s+/g, '_');
@@ -439,6 +496,7 @@
                 email: emailCliente,
                 telefono_voz: document.getElementById("inputTelVoz").value.trim(),
                 telefono_whatsapp: document.getElementById("inputTelWhatsapp").value.trim(),
+                system_prompt: document.getElementById("inputSystemPrompt").value.trim(),
                 inventario: [{
                     nombre: document.getElementById("inputProdNombre").value,
                     categoria: document.getElementById("inputProdCategoria").value,

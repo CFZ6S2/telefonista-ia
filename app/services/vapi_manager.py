@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 VAPI_API_BASE = "https://api.vapi.ai"
 
-async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, webhook_base_url: str, vapi_api_key: str = None) -> dict:
+async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, webhook_base_url: str, vapi_api_key: str = None, system_prompt: str = None) -> dict:
     """
     Crea automáticamente un Asistente de Voz en Vapi.ai apuntando su Server URL 
     al webhook dinámico del cliente (/api/v1/voice/webhook/{cliente_id}).
@@ -23,16 +23,24 @@ async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, 
     }
 
     server_url = f"{webhook_base_url}/api/v1/voice/webhook/{cliente_id}"
+    
+    sys_prompt = system_prompt if system_prompt else f"Eres el asistente telefónico oficial de {nombre_empresa}. Responde en frases cortas en el idioma del usuario."
 
     payload = {
         "name": f"Telefonista IA - {nombre_empresa}",
+        "firstMessage": f"Hola, has llamado a {nombre_empresa}, ¿en qué te puedo ayudar?",
+        "transcriber": {
+            "provider": "deepgram",
+            "model": "nova-2",
+            "language": "es"
+        },
         "model": {
             "provider": "openai",
             "model": "gpt-4o",
             "messages": [
                 {
                     "role": "system",
-                    "content": f"Eres el asistente telefónico oficial de {nombre_empresa}. Responde en frases cortas en el idioma del usuario."
+                    "content": sys_prompt
                 }
             ]
         },

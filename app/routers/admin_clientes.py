@@ -57,6 +57,58 @@ class CrearClientePayload(BaseModel):
     telefono_whatsapp: Optional[str] = "No configurado"
     vapi_api_key: Optional[str] = None
     inventario: List[ProductoItem]
+    system_prompt: Optional[str] = ""
+
+class AnalizarAnuncioPayload(BaseModel):
+    texto: str
+
+@router.post("/analizar-anuncio", dependencies=[Depends(verificar_admin_api_key)])
+async def analizar_anuncio(payload: AnalizarAnuncioPayload):
+    from openai import AsyncOpenAI
+    api_key = getattr(settings, "OPENAI_API_KEY", "")
+    base_url = getattr(settings, "OPENAI_BASE_URL", "https://api.deepseek.com")
+    model = getattr(settings, "DEEPSEEK_MODEL", "deepseek-chat")
+    
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY no configurada")
+    
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    
+    prompt = f"""Analiza este anuncio o texto de un negocio y extrae la información en formato JSON estricto.
+El JSON debe tener esta estructura:
+{{
+  "nombre_empresa": "El nombre comercial o de la persona",
+  "cliente_id": "Un id corto sin espacios (ej: clinica_dental, marta_25)",
+  "system_prompt": "Un system prompt MUY DETALLADO en primera persona para que la IA actúe como este negocio/persona respondiendo por WhatsApp/Teléfono. Debe incluir tono, estilo y directrices (ej: frases cortas, no decir que eres IA).",
+  "inventario": [
+    {{
+      "nombre": "Nombre del servicio/producto",
+      "categoria": "Categoría general",
+      "precio": "Precio",
+      "detalles": "Breve detalle",
+      "ubicacion": "Ubicación si aplica"
+    }}
+  ]
+}}
+
+Texto a analizar:
+{payload.texto}
+"""
+    try:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": "Eres un extractor de datos JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+        import json
+        resultado = json.loads(response.choices[0].message.content)
+        return resultado
+    except Exception as e:
+        logger.error(f"Error analizando anuncio: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/alta-cliente", dependencies=[Depends(verificar_admin_api_key)])
 async def dar_de_alta_cliente(payload: CrearClientePayload):
@@ -70,7 +122,8 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         cliente_id=cliente_id,
         nombre_empresa=payload.nombre_empresa,
         webhook_base_url=vps_base_url,
-        vapi_api_key=payload.vapi_api_key
+        vapi_api_key=payload.vapi_api_key,
+        system_prompt=payload.system_prompt
     )
 
     db = _get_db()

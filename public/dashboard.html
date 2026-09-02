@@ -48,7 +48,7 @@
             <div class="d-flex align-items-center">
                 <form onsubmit="return false;" class="m-0 p-0 me-2">
                     <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
-                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="localStorage.setItem('telefonista_admin_key', this.value)" autocomplete="current-password">
+                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="guardarKeyYRecargar(this.value)" autocomplete="current-password">
                 </form>
                 <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
             </div>
@@ -292,6 +292,13 @@
         const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
         let LISTA_CLIENTES_API = [];
 
+        let _keyDebounce = null;
+        function guardarKeyYRecargar(val) {
+            localStorage.setItem('telefonista_admin_key', val);
+            clearTimeout(_keyDebounce);
+            _keyDebounce = setTimeout(() => { if (val) inicializarDashboard(); }, 600);
+        }
+
         window.onload = function() {
             inicializarDashboard();
         };
@@ -299,23 +306,26 @@
         async function inicializarDashboard() {
             const savedKey = localStorage.getItem('telefonista_admin_key') || '';
             if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
-            
+
+            if (!savedKey) {
+                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-warning p-4">Introduce tu Admin API Key arriba para cargar las empresas.</td></tr>';
+                return;
+            }
+
             document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Cargando empresas...</td></tr>';
-            
+
             try {
-                const adminKey = localStorage.getItem('telefonista_admin_key') || '';
                 const res = await fetch(`${API_BASE}/api/v1/admin/lista-clientes`, {
-                    headers: { 'X-API-Key': adminKey }
+                    headers: { 'X-API-Key': savedKey }
                 });
                 if (res.ok) {
                     const data = await res.json();
                     LISTA_CLIENTES_API = data.clientes || [];
-                    
-                    // Also try to fetch the IA status for each client to display in the master view if possible
-                    // For now we'll just display a simplified view
                     poblarTablaDirectorio(LISTA_CLIENTES_API);
+                } else if (res.status === 401) {
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">API Key incorrecta. Revisa la clave introducida.</td></tr>';
                 } else {
-                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error cargando clientes. Verifica tu API Key.</td></tr>';
+                    document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-danger p-4">Error cargando clientes (HTTP ' + res.status + ').</td></tr>';
                 }
             } catch (err) {
                 console.warn("No se pudieron cargar clientes desde API:", err);

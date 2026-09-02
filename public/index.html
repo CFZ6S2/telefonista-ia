@@ -269,6 +269,7 @@
                             <div class="col-md-6"><input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoria" required></div>
                             <div class="col-md-4"><input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio" required></div>
                             <div class="col-md-8"><input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles" required></div>
+                            <div class="col-md-12 mt-2"><input type="text" id="inputProdUbi" class="form-control form-control-sm" placeholder="Ubicación"></div>
                         </div>
                         <div class="text-end mt-3">
                             <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
@@ -312,7 +313,7 @@
         };
         firebase.initializeApp(firebaseConfig);
 
-        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
+        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://telefonista-api.duckdns.org";
         let LISTA_CLIENTES_API = [];
         let _currentIdToken = null;
 
@@ -456,6 +457,7 @@
             
             try {
                 const headers = await getAuthHeaders();
+                headers['Content-Type'] = 'application/json';
                 const res = await fetch(`${API_BASE}/api/v1/admin/analizar-anuncio`, {
                     method: 'POST',
                     headers: headers,
@@ -501,17 +503,25 @@
                     nombre: document.getElementById("inputProdNombre").value,
                     categoria: document.getElementById("inputProdCategoria").value,
                     precio: document.getElementById("inputProdPrecio").value,
-                    detalles: document.getElementById("inputProdDetalles").value
+                    detalles: document.getElementById("inputProdDetalles").value,
+                    ubicacion: document.getElementById("inputProdUbi").value
                 }]
             };
+
             try {
                 const headers = await getAuthHeaders();
                 headers['Content-Type'] = 'application/json';
                 const res = await fetch(`${API_BASE}/api/v1/admin/alta-cliente`, {
                     method: 'POST', headers, body: JSON.stringify(payload)
                 });
+                if(!res.ok) {
+                    const err = await res.json();
+                    alert("Error: " + JSON.stringify(err));
+                    return;
+                }
                 const data = await res.json();
-                alert('⚡ CLIENTE REGISTRADO\n\nNombre: ' + nombreEmpresa + '\nID: ' + clienteId);
+                const pin = data.pin_acceso || "No generado";
+                alert('⚡ CLIENTE REGISTRADO\n\nNombre: ' + nombreEmpresa + '\nID: ' + clienteId + '\nPIN DE ACCESO: ' + pin);
             } catch(err) {
                 alert('⚡ CLIENTE REGISTRADO LOCALMENTE\n\nNombre: ' + nombreEmpresa);
             }

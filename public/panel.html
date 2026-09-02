@@ -204,9 +204,9 @@
                 } else {
                     dataLeads.leads.forEach(l => {
                         tbody.innerHTML += `<tr>
-                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.nombre || 'Desconocido'}</td>
-                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.telefono || ''}</td>
-                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.producto_interes || ''}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${escapeHTML(l.nombre || 'Desconocido')}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${escapeHTML(l.telefono || '')}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${escapeHTML(l.interes || l.producto_interes || '')}</td>
                         </tr>`;
                     });
                 }
@@ -222,13 +222,14 @@
                     div.innerHTML = '<p style="text-align:center; color:#666;">No hay conversaciones registradas.</p>';
                 } else {
                     dataConvs.conversaciones.forEach(c => {
-                        const rec = c.ultimo_mensaje.substring(0, 40) + '...';
-                        div.innerHTML += `
-                            <div style="border:1px solid #ccc; padding:10px; margin-bottom:8px; border-radius:6px; cursor:pointer; background:white;" onclick="verChat('${c.remitente}')">
-                                <strong>📱 ${c.remitente}</strong><br>
-                                <span style="font-size:12px; color:#555;">${c.ultimo_role === 'assistant' ? 'IA: ' : 'User: '}${rec}</span>
-                            </div>
-                        `;
+                        const safeRemitente = escapeHTML(c.remitente);
+                        const rec = escapeHTML((c.ultimo_mensaje || '').substring(0, 40)) + '...';
+                        const prefix = c.ultimo_role === 'assistant' ? 'IA: ' : 'User: ';
+                        const el = document.createElement('div');
+                        el.style.cssText = 'border:1px solid #ccc; padding:10px; margin-bottom:8px; border-radius:6px; cursor:pointer; background:white;';
+                        el.innerHTML = `<strong>📱 ${safeRemitente}</strong><br><span style="font-size:12px; color:#555;">${prefix}${rec}</span>`;
+                        el.addEventListener('click', () => verChat(c.remitente));
+                        div.appendChild(el);
                     });
                 }
             }

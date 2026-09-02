@@ -47,16 +47,15 @@ async def recibir_mensaje_whatsapp(request: Request):
             if text_body:
                 cliente_id = value.get("metadata", {}).get("display_phone_number", "default")
                 
-                # Importar funciones si no están
-                from app.database import obtener_historial_conversacion, guardar_mensaje_historial
-                
-                guardar_mensaje_historial(cliente_id, from_number, "user", text_body)
-                historial = obtener_historial_conversacion(cliente_id, from_number, limite=6)
+                from app.database import obtener_historial_conversacion_async, guardar_mensaje_historial_async
+
+                await guardar_mensaje_historial_async(cliente_id, from_number, "user", text_body)
+                historial = await obtener_historial_conversacion_async(cliente_id, from_number, limite=6)
                 if not historial:
                     historial = [{"role": "user", "content": text_body}]
-                
+
                 respuesta_ia = await procesar_mensaje_ia(historial, canal="whatsapp", cliente_id=cliente_id)
-                guardar_mensaje_historial(cliente_id, from_number, "assistant", respuesta_ia)
+                await guardar_mensaje_historial_async(cliente_id, from_number, "assistant", respuesta_ia)
                 
                 await enviar_mensaje_whatsapp(from_number, respuesta_ia)
 

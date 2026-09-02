@@ -457,6 +457,7 @@
             
             try {
                 const headers = await getAuthHeaders();
+                headers['Content-Type'] = 'application/json';
                 const res = await fetch(`${API_BASE}/api/v1/admin/analizar-anuncio`, {
                     method: 'POST',
                     headers: headers,

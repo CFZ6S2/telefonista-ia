@@ -26,7 +26,8 @@ async def webhook_evolution_whatsapp(cliente_id: str, request: Request, token: s
     Webhook para recibir mensajes de WhatsApp desde Evolution API,
     procesar con historial conversacional de Firestore y ENVIAR RESPUESTA VÍA HTTP.
     """
-    if token != settings.WEBHOOK_SECRET:
+    webhook_secret = request.headers.get("x-webhook-secret") or token
+    if webhook_secret != settings.WEBHOOK_SECRET:
         logger.warning(f"Intento de acceso no autorizado a Evolution Webhook para {cliente_id}")
         raise HTTPException(status_code=401, detail="Unauthorized webhook caller")
         

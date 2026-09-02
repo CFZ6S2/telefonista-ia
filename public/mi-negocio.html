@@ -300,8 +300,9 @@
             appId: "1:5745604345:web:ce95d46abf55183fc7d428"
         });
 
-        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
+        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://telefonista-api.duckdns.org";
         let currentClienteId = null;
+        let currentPin = null;
 
         function loginConGoogle() {
             const provider = new firebase.auth.GoogleAuthProvider();

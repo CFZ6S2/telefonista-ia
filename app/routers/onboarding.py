@@ -98,8 +98,11 @@ def obtener_config_negocio(cliente_id: str, pin: str = None):
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     data = doc.to_dict()
-    
-    if data.get("pin_acceso") and data.get("pin_acceso") != pin:
+
+    stored_pin = data.get("pin_acceso")
+    if not stored_pin:
+        raise HTTPException(status_code=403, detail="Acceso no configurado. Contacta al administrador.")
+    if stored_pin != pin:
         raise HTTPException(status_code=401, detail="PIN incorrecto")
 
     return {
@@ -127,7 +130,10 @@ def guardar_config_negocio(cliente_id: str, payload: ConfigNegocioPayload, pin: 
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
         
     data = doc.to_dict()
-    if data.get("pin_acceso") and data.get("pin_acceso") != pin:
+    stored_pin = data.get("pin_acceso")
+    if not stored_pin:
+        raise HTTPException(status_code=403, detail="Acceso no configurado. Contacta al administrador.")
+    if stored_pin != pin:
         raise HTTPException(status_code=401, detail="PIN incorrecto")
 
     try:

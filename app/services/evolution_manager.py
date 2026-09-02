@@ -14,7 +14,7 @@ async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_
         "Content-Type": "application/json"
     }
     
-    webhook_target = f"{webhook_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}?token={settings.WEBHOOK_SECRET}"
+    webhook_target = f"{webhook_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}"
 
     payload = {
         "instanceName": cliente_id,
@@ -22,6 +22,9 @@ async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_
         "qrcode": True,
         "integration": "WHATSAPP-BAILEYS",
         "webhook": webhook_target,
+        "webhookHeaders": {
+            "x-webhook-secret": settings.WEBHOOK_SECRET
+        },
         "webhook_by_events": False,
         "events": [
             "MESSAGES_UPSERT"
@@ -60,3 +63,15 @@ async def obtener_qr_instancia_evolution(cliente_id: str) -> dict:
         logger.error(f"Error obteniendo QR para {cliente_id}: {e}")
     
     return {"status": "error"}
+
+async def obtener_estado_instancia_evolution(cliente_id: str) -> dict:
+    url = f"{EVOLUTION_API_BASE}/instance/connectionState/{cliente_id}"
+    headers = {"apikey": EVOLUTION_GLOBAL_KEY}
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                return response.json()
+    except Exception as e:
+        logger.error(f"Error obteniendo estado de instancia {cliente_id}: {e}")
+    return {"instance": {"state": "error"}}

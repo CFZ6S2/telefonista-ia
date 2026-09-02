@@ -37,8 +37,8 @@ async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, 
             ]
         },
         "voice": {
-            "provider": "playht",
-            "voiceId": "jennifer"
+            "provider": "openai",
+            "voiceId": "shimmer"
         },
         "serverUrl": server_url
     }

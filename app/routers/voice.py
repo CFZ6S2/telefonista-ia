@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, HTTPException
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
 from app.database import (
-    buscar_en_inventario_async, agendar_cita_async, guardar_mensaje_historial_async, 
+    buscar_en_inventario_async, agendar_cita_async, guardar_mensaje_historial_async,
     obtener_historial_conversacion_async, obtener_estado_ia_async, get_cliente_doc_async
 )
 from app.config import settings
@@ -10,6 +10,74 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+async def _guardar_llamada_completa(cliente_id: str, body: dict):
+    """Guarda la transcripcion completa y datos de una llamada finalizada en Firestore."""
+    from app.database import _get_db, _server_timestamp
+    from fastapi.concurrency import run_in_threadpool
+    from app.services.crm import registrar_lead
+
+    message = body.get("message", {})
+    call_data = message.get("call", {}) or body.get("call", {})
+    customer = call_data.get("customer", {})
+    caller_number = customer.get("number", "voz_desconocido")
+
+    transcript_raw = message.get("transcript", "")
+    artifact = message.get("artifact", {})
+    messages_list = artifact.get("messages", [])
+    summary = message.get("summary") or artifact.get("summary", "")
+    duration_seconds = message.get("durationSeconds") or call_data.get("duration")
+    ended_reason = message.get("endedReason", "")
+
+    remitente = f"voz_{caller_number}"
+
+    if messages_list:
+        for msg in messages_list:
+            role = msg.get("role", "user")
+            content = msg.get("message") or msg.get("content", "")
+            if not content:
+                continue
+            if role in ("bot", "assistant"):
+                role = "assistant"
+            elif role in ("user", "customer"):
+                role = "user"
+            else:
+                continue
+            await guardar_mensaje_historial_async(cliente_id, remitente, role, content)
+    elif transcript_raw:
+        await guardar_mensaje_historial_async(cliente_id, remitente, "user", transcript_raw)
+
+    def guardar_resumen():
+        db = _get_db()
+        if not db:
+            return
+        doc_data = {
+            "tipo": "voz",
+            "telefono": caller_number,
+            "duracion_segundos": duration_seconds,
+            "resumen": summary,
+            "motivo_fin": ended_reason,
+            "timestamp": _server_timestamp(),
+        }
+        db.collection("clientes").document(cliente_id)\
+          .collection("conversaciones").document(remitente)\
+          .set(doc_data, merge=True)
+
+    await run_in_threadpool(guardar_resumen)
+
+    if caller_number and caller_number != "voz_desconocido":
+        await run_in_threadpool(
+            registrar_lead,
+            nombre=f"Llamada de {caller_number}",
+            telefono=caller_number,
+            canal="voz",
+            interes=summary[:200] if summary else "Llamada de voz",
+            notas=f"Duración: {duration_seconds or '?'}s. Fin: {ended_reason}",
+            cliente_id=cliente_id,
+        )
+
+    logger.info(f"[Voice] Llamada guardada para {cliente_id}: {remitente}, {len(messages_list)} msgs, {duration_seconds}s")
+
 
 @router.post("/webhook/{cliente_id}")
 async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request):
@@ -31,11 +99,15 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     message = body.get("message", {})
     type_event = message.get("type")
 
+    if type_event == "end-of-call-report":
+        await _guardar_llamada_completa(cliente_id, body)
+        return {"status": "ok"}
+
     if type_event == "assistant-request":
         telefono_personal = ""
         nombre_empresa = cliente_id
         voz_asistente = ""
-        
+
         data = await get_cliente_doc_async(cliente_id)
         if data:
             telefono_personal = data.get("telefono_personal", "")
@@ -107,19 +179,5 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
             })
 
         return {"results": results}
-
-    transcript = body.get("transcript") or message.get("transcript")
-    caller_number = body.get("call", {}).get("customer", {}).get("number", "voz_desconocido")
-
-    if transcript:
-        await guardar_mensaje_historial_async(cliente_id, caller_number, "user", transcript)
-
-        historial = await obtener_historial_conversacion_async(cliente_id, caller_number, limite=6)
-        if not historial:
-            historial = [{"role": "user", "content": transcript}]
-
-        respuesta = await procesar_mensaje_ia(historial, canal="voz", cliente_id=cliente_id)
-        await guardar_mensaje_historial_async(cliente_id, caller_number, "assistant", respuesta)
-        return {"response": respuesta}
 
     return {"status": "ok"}

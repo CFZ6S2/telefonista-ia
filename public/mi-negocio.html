@@ -132,6 +132,21 @@
         .voice-option .voice-icon { font-size: 24px; margin-bottom: 4px; }
         .voice-option .voice-name { font-size: 13px; font-weight: 600; }
         .voice-option .voice-desc { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
+
+        .wa-status { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+        .wa-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .wa-dot.connected { background: var(--accent); }
+        .wa-dot.disconnected { background: var(--danger); }
+        .wa-dot.checking { background: var(--text-tertiary); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .wa-status-text { font-size: 14px; font-weight: 600; }
+        .wa-status-sub { font-size: 12px; color: var(--text-secondary); }
+        .qr-container { text-align: center; margin: 16px 0; }
+        .qr-container img { max-width: 260px; border-radius: 10px; border: 1px solid var(--border); }
+        .btn-secondary {
+            background: var(--surface-alt); color: var(--text); border: 1.5px solid var(--border);
+        }
+        .btn-secondary:hover { border-color: var(--text-tertiary); }
     </style>
 </head>
 <body>
@@ -222,6 +237,30 @@
                 <div class="card-body">
                     <div class="voice-grid" id="voiceGrid"></div>
                     <div class="hint" style="margin-top: 10px; text-align: center;">La voz seleccionada se aplica automaticamente a las llamadas</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h1>WhatsApp</h1>
+                    <p>Conecta tu WhatsApp para que la IA atienda los mensajes de tus clientes.</p>
+                </div>
+                <div class="card-body">
+                    <div class="wa-status" id="waStatus">
+                        <div class="wa-dot checking" id="waDot"></div>
+                        <div>
+                            <div class="wa-status-text" id="waStatusText">Comprobando...</div>
+                            <div class="wa-status-sub" id="waStatusSub"></div>
+                        </div>
+                    </div>
+                    <div class="qr-container" id="qrContainer" style="display:none;">
+                        <p style="font-size:13px; color:var(--text-secondary); margin-bottom:12px;">Escanea este codigo QR con WhatsApp para conectar:</p>
+                        <img id="qrImage" src="" alt="QR WhatsApp">
+                        <div class="hint" style="margin-top:10px;">Abre WhatsApp > Menu > Dispositivos vinculados > Vincular dispositivo</div>
+                    </div>
+                    <button class="btn btn-secondary" id="btnWhatsApp" onclick="gestionarWhatsApp()" style="margin-top:12px;">
+                        Obtener QR
+                    </button>
                 </div>
             </div>
 
@@ -321,6 +360,7 @@
             document.getElementById('cfgTelefonoPersonal').value = data.telefono_personal || '';
             selectedVoiceId = data.voz_asistente || 'openai_alloy';
             renderVoiceGrid(selectedVoiceId);
+            comprobarEstadoWhatsApp();
         }
 
         async function guardarConfig() {
@@ -372,6 +412,69 @@
                 '<div class="voice-name">' + v.name + '</div>' +
                 '<div class="voice-desc">' + v.desc + '</div></div>'
             ).join('');
+        }
+
+        let waCheckInterval = null;
+
+        async function comprobarEstadoWhatsApp() {
+            if (!currentClienteId) return;
+            const dot = document.getElementById('waDot');
+            const text = document.getElementById('waStatusText');
+            const sub = document.getElementById('waStatusSub');
+            const btn = document.getElementById('btnWhatsApp');
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/estado/${currentClienteId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.connected) {
+                        dot.className = 'wa-dot connected';
+                        text.textContent = 'Conectado';
+                        sub.textContent = 'WhatsApp vinculado y funcionando';
+                        btn.textContent = 'Refrescar estado';
+                        document.getElementById('qrContainer').style.display = 'none';
+                        if (waCheckInterval) { clearInterval(waCheckInterval); waCheckInterval = null; }
+                    } else {
+                        dot.className = 'wa-dot disconnected';
+                        text.textContent = 'Desconectado';
+                        sub.textContent = 'Escanea el QR para vincular tu WhatsApp';
+                        btn.textContent = 'Obtener QR';
+                    }
+                }
+            } catch (e) {
+                dot.className = 'wa-dot disconnected';
+                text.textContent = 'Error';
+                sub.textContent = 'No se pudo comprobar el estado';
+            }
+        }
+
+        async function gestionarWhatsApp() {
+            if (!currentClienteId) return;
+            const btn = document.getElementById('btnWhatsApp');
+            btn.disabled = true;
+            btn.textContent = 'Cargando...';
+            try {
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/qr/${currentClienteId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const qrBase64 = data.qrcode || data.base64 || data.code;
+                    if (qrBase64) {
+                        const img = document.getElementById('qrImage');
+                        img.src = qrBase64.startsWith('data:') ? qrBase64 : 'data:image/png;base64,' + qrBase64;
+                        document.getElementById('qrContainer').style.display = 'block';
+                        showToast('QR generado. Escanea con WhatsApp.');
+                        if (!waCheckInterval) {
+                            waCheckInterval = setInterval(comprobarEstadoWhatsApp, 5000);
+                        }
+                    } else {
+                        showToast('No se pudo obtener el QR. Prueba en unos segundos.');
+                    }
+                } else {
+                    showToast('Error obteniendo QR');
+                }
+            } catch (e) { showToast('Error de conexion'); }
+            btn.disabled = false;
+            btn.textContent = 'Obtener QR';
+            comprobarEstadoWhatsApp();
         }
 
         async function seleccionarVoz(voiceId) {

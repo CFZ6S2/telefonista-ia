@@ -48,7 +48,8 @@ async def crear_o_vincular_asistente_vapi(cliente_id: str, nombre_empresa: str, 
             "provider": "openai",
             "voiceId": "shimmer"
         },
-        "serverUrl": server_url
+        "serverUrl": server_url,
+        "serverUrlSecret": settings.WEBHOOK_SECRET
     }
 
     try:

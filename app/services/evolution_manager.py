@@ -14,7 +14,7 @@ async def crear_instancia_evolution_y_conectar_webhook(cliente_id: str, webhook_
         "Content-Type": "application/json"
     }
     
-    webhook_target = f"{webhook_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}"
+    webhook_target = f"{webhook_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}?token={settings.WEBHOOK_SECRET}"
 
     payload = {
         "instanceName": cliente_id,

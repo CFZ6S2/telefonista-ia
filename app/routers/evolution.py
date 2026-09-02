@@ -21,11 +21,15 @@ async def cambiar_estado_ia_async(*args, **kwargs):
     return await run_in_threadpool(cambiar_estado_ia, *args, **kwargs)
 
 @router.post("/evolution-webhook/{cliente_id}")
-async def webhook_evolution_whatsapp(cliente_id: str, request: Request):
+async def webhook_evolution_whatsapp(cliente_id: str, request: Request, token: str = None):
     """
     Webhook para recibir mensajes de WhatsApp desde Evolution API,
     procesar con historial conversacional de Firestore y ENVIAR RESPUESTA VÍA HTTP.
     """
+    if token != settings.WEBHOOK_SECRET:
+        logger.warning(f"Intento de acceso no autorizado a Evolution Webhook para {cliente_id}")
+        raise HTTPException(status_code=401, detail="Unauthorized webhook caller")
+        
     try:
         data = await request.json()
         logger.info(f"[Evolution Webhook ({cliente_id})]: {data}")

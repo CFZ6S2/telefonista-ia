@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     VAPI_API_KEY: str = ""
     ADMIN_SECRET_KEY: str = ""
     ADMIN_EMAILS: str = "cesar.herrera.rojo@gmail.com"
+    WEBHOOK_SECRET: str = "t3l3f0n1st4_s3cr3t_2026"
 
     WHATSAPP_TOKEN: str = "tu_token_de_meta_whatsapp"
     WHATSAPP_PHONE_NUMBER_ID: str = "tu_phone_number_id_de_meta"

@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, HTTPException
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
 from app.database import (
     buscar_en_inventario_async, agendar_cita_async, guardar_mensaje_historial_async, 
     obtener_historial_conversacion_async, obtener_estado_ia_async, get_cliente_doc_async
 )
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,11 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     Webhook multi-cliente para asistentes de voz (Vapi.ai / Retell AI).
     URL: /api/v1/voice/webhook/clinica_sonrisas
     """
+    vapi_secret = request.headers.get("x-vapi-secret")
+    if vapi_secret != settings.WEBHOOK_SECRET:
+        logger.warning(f"Intento de acceso no autorizado a Vapi Webhook para {cliente_id}")
+        raise HTTPException(status_code=401, detail="Unauthorized webhook caller")
+
     try:
         body = await request.json()
     except Exception:

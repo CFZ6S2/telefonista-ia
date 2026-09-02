@@ -93,6 +93,30 @@ async def verificar_estado_conexion(cliente_id: str):
     return {"cliente_id": cliente_id, "state": "error", "connected": False}
 
 
+@router.get("/mi-empresa")
+def buscar_empresa_por_email(email: str):
+    db = _get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+    docs = db.collection("clientes").where("email", "==", email.lower().strip()).limit(1).stream()
+    for doc in docs:
+        data = doc.to_dict()
+        return {
+            "cliente_id": doc.id,
+            "nombre_empresa": data.get("nombre_empresa", ""),
+            "horario": data.get("horario", ""),
+            "direccion": data.get("direccion", ""),
+            "tarifas": data.get("tarifas", ""),
+            "reglas": data.get("reglas", ""),
+            "instrucciones_ia": data.get("instrucciones_ia", ""),
+            "telefono_personal": data.get("telefono_personal", ""),
+            "voz_asistente": data.get("voz_asistente", ""),
+            "ia_activa": data.get("ia_activa", True),
+            "telefono_voz": data.get("telefono_voz", "")
+        }
+    raise HTTPException(status_code=404, detail="No hay empresa registrada con ese email")
+
+
 class ConfigNegocioPayload(BaseModel):
     horario: Optional[str] = ""
     direccion: Optional[str] = ""

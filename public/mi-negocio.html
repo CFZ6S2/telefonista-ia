@@ -47,9 +47,7 @@
             background: var(--surface); border-radius: 14px; box-shadow: var(--shadow);
             overflow: hidden; margin-bottom: 16px;
         }
-        .card-header {
-            padding: 18px 22px; border-bottom: 1px solid var(--border);
-        }
+        .card-header { padding: 18px 22px; border-bottom: 1px solid var(--border); }
         .card-header h1 { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
         .card-header p { font-size: 13px; color: var(--text-secondary); }
         .card-body { padding: 22px; }
@@ -96,19 +94,31 @@
         }
         .toast.show { opacity: 1; }
 
-        .access-form { text-align: center; padding: 40px 20px; }
-        .access-form h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-        .access-form p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
-        .access-form input {
-            width: 100%; max-width: 300px; padding: 10px 14px; font-size: 14px;
-            border: 1.5px solid var(--border); border-radius: 10px;
-            background: var(--surface-alt); color: var(--text);
-            font-family: inherit; outline: none; text-align: center; margin-bottom: 12px;
+        .login-panel { text-align: center; padding: 40px 20px; }
+        .login-panel h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+        .login-panel p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+        .login-panel .login-error { color: var(--danger); font-size: 13px; margin-top: 12px; display: none; }
+
+        .btn-google {
+            display: inline-flex; align-items: center; gap: 10px;
+            background: #fff; border: 1px solid #dadce0; border-radius: 8px;
+            padding: 10px 24px; font-size: 15px; font-weight: 500; color: #3c4043;
+            cursor: pointer; transition: box-shadow .2s;
         }
-        .access-form .btn { max-width: 300px; margin: 0 auto; }
+        .btn-google:hover { box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+        .btn-google svg { width: 20px; height: 20px; }
+
+        .user-bar {
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            margin-bottom: 16px; font-size: 13px; color: var(--text-secondary);
+        }
+        .user-bar img { width: 24px; height: 24px; border-radius: 50%; }
+        .user-bar button {
+            background: none; border: 1px solid var(--border); border-radius: 6px;
+            padding: 4px 10px; font-size: 12px; cursor: pointer; color: var(--text-secondary);
+        }
 
         .error-msg { color: var(--danger); font-size: 13px; margin-bottom: 12px; display: none; }
-
         .footer { text-align: center; font-size: 11px; color: var(--text-tertiary); margin-top: 20px; }
 
         .voice-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -132,16 +142,24 @@
             <span class="logo-text">Telefonista IA</span>
         </div>
 
-        <!-- Pantalla de acceso -->
-        <div class="card" id="accessPanel">
-            <div class="access-form">
+        <!-- Login con Google -->
+        <div class="card" id="loginPanel">
+            <div class="login-panel">
                 <h2>Panel de Configuracion</h2>
-                <p>Introduce el ID de tu empresa para acceder a los ajustes de tu asistente IA.</p>
-                <div class="error-msg" id="accessError">Empresa no encontrada</div>
-                <input type="text" id="inputClienteId" placeholder="Ej: clinica_dental_sonrisas" onkeydown="if(event.key==='Enter')acceder()">
-                <br>
-                <button class="btn btn-primary" onclick="acceder()">Acceder</button>
+                <p>Inicia sesion con tu cuenta de Google para acceder a los ajustes de tu negocio.</p>
+                <button class="btn-google" onclick="loginConGoogle()">
+                    <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Iniciar sesion con Google
+                </button>
+                <div class="login-error" id="loginError"></div>
             </div>
+        </div>
+
+        <!-- Barra de usuario -->
+        <div class="user-bar" id="userBar" style="display:none;">
+            <img id="userAvatar" src="" alt="">
+            <span id="userEmail"></span>
+            <button onclick="cerrarSesion()">Salir</button>
         </div>
 
         <!-- Panel de configuracion -->
@@ -168,19 +186,19 @@
 
                     <div class="field">
                         <label><span class="icon">💰</span> Tarifas y Precios</label>
-                        <textarea id="cfgTarifas" rows="4" placeholder="Ej: Limpieza dental 60€, Blanqueamiento 150€, Primera consulta gratis, Ortodoncia desde 1200€..."></textarea>
+                        <textarea id="cfgTarifas" rows="4" placeholder="Ej: Limpieza dental 60eur, Blanqueamiento 150eur, Primera consulta gratis..."></textarea>
                         <div class="hint">Lista tus servicios con precios. La IA SOLO mencionara lo que escribas aqui</div>
                     </div>
 
                     <div class="field">
                         <label><span class="icon">📋</span> Reglas y Condiciones</label>
-                        <textarea id="cfgReglas" rows="3" placeholder="Ej: Solo con cita previa. No devoluciones en efectivo. Parking gratuito para clientes. Se requiere DNI."></textarea>
+                        <textarea id="cfgReglas" rows="3" placeholder="Ej: Solo con cita previa. No devoluciones en efectivo. Parking gratuito para clientes."></textarea>
                         <div class="hint">Condiciones que la IA debe respetar siempre</div>
                     </div>
 
                     <div class="field">
                         <label><span class="icon">🧠</span> Instrucciones especiales para la IA</label>
-                        <textarea id="cfgInstrucciones" rows="3" placeholder="Ej: Se muy cercano y usa emojis. Si preguntan por financiacion, diles que se puede pagar en 3 plazos sin intereses."></textarea>
+                        <textarea id="cfgInstrucciones" rows="3" placeholder="Ej: Se muy cercano y usa emojis. Si preguntan por financiacion, diles que se puede pagar en 3 plazos."></textarea>
                         <div class="hint">Personalidad, tono, respuestas especificas que quieras que la IA siga</div>
                     </div>
 
@@ -217,43 +235,83 @@
             </div>
         </div>
 
+        <!-- No encontrado -->
+        <div class="card" id="notFoundPanel" style="display:none;">
+            <div class="login-panel">
+                <h2>Cuenta no registrada</h2>
+                <p id="notFoundMsg">No hay empresa vinculada a este email. Contacta con tu administrador.</p>
+                <button class="btn-google" onclick="cerrarSesion()">Intentar con otra cuenta</button>
+            </div>
+        </div>
+
         <div class="footer">Telefonista IA &middot; Los cambios se aplican al instante</div>
     </div>
 
     <div class="toast" id="toast">Configuracion guardada</div>
 
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script>
-        const API_BASE = window.location.origin;
+        firebase.initializeApp({
+            apiKey: "AIzaSyBvzPjb08kal71CYBtaEbd4NXM_ZscG24s",
+            authDomain: "telefonista-web-app.firebaseapp.com",
+            projectId: "telefonista-web-app",
+            storageBucket: "telefonista-web-app.firebasestorage.app",
+            messagingSenderId: "5745604345",
+            appId: "1:5745604345:web:ce95d46abf55183fc7d428"
+        });
+
+        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://continent-astronomy-pocket-slight.trycloudflare.com";
         let currentClienteId = null;
 
-        function getClienteIdFromURL() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('id') || '';
+        function loginConGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            firebase.auth().signInWithPopup(provider).catch(err => {
+                const el = document.getElementById('loginError');
+                el.style.display = 'block';
+                el.textContent = err.code === 'auth/popup-closed-by-user' ? 'Popup cerrado. Intentalo de nuevo.' : 'Error: ' + err.message;
+            });
         }
 
-        async function acceder() {
-            const id = (document.getElementById('inputClienteId').value || '').trim().toLowerCase().replace(/\s+/g, '_');
-            if (!id) return;
-            document.getElementById('accessError').style.display = 'none';
+        function cerrarSesion() {
+            firebase.auth().signOut();
+        }
 
+        firebase.auth().onAuthStateChanged(async (user) => {
+            if (user) {
+                document.getElementById('loginPanel').style.display = 'none';
+                document.getElementById('userAvatar').src = user.photoURL || '';
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userBar').style.display = 'flex';
+                await buscarEmpresa(user.email);
+            } else {
+                document.getElementById('loginPanel').style.display = 'block';
+                document.getElementById('userBar').style.display = 'none';
+                document.getElementById('configPanel').style.display = 'none';
+                document.getElementById('notFoundPanel').style.display = 'none';
+            }
+        });
+
+        async function buscarEmpresa(email) {
             try {
-                const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${id}`);
-                if (!res.ok) {
-                    document.getElementById('accessError').style.display = 'block';
-                    return;
+                const res = await fetch(`${API_BASE}/api/v1/onboarding/mi-empresa?email=${encodeURIComponent(email)}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    currentClienteId = data.cliente_id;
+                    mostrarConfig(data);
+                } else {
+                    document.getElementById('notFoundPanel').style.display = 'block';
+                    document.getElementById('notFoundMsg').textContent = 'No hay empresa vinculada a ' + email + '. Contacta con tu administrador.';
                 }
-                const data = await res.json();
-                currentClienteId = id;
-                mostrarConfig(data);
             } catch (e) {
-                document.getElementById('accessError').textContent = 'Error de conexion';
-                document.getElementById('accessError').style.display = 'block';
+                document.getElementById('notFoundPanel').style.display = 'block';
+                document.getElementById('notFoundMsg').textContent = 'Error de conexion con el servidor.';
             }
         }
 
         function mostrarConfig(data) {
-            document.getElementById('accessPanel').style.display = 'none';
             document.getElementById('configPanel').style.display = 'block';
+            document.getElementById('notFoundPanel').style.display = 'none';
             document.getElementById('nombreEmpresa').textContent = data.nombre_empresa || currentClienteId;
             document.getElementById('cfgHorario').value = data.horario || '';
             document.getElementById('cfgDireccion').value = data.direccion || '';
@@ -270,7 +328,6 @@
             const btn = document.getElementById('btnGuardar');
             btn.disabled = true;
             btn.textContent = 'Guardando...';
-
             try {
                 const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}`, {
                     method: 'POST',
@@ -284,15 +341,8 @@
                         telefono_personal: document.getElementById('cfgTelefonoPersonal').value
                     })
                 });
-                if (res.ok) {
-                    showToast('Configuracion guardada. La IA se actualiza al instante.');
-                } else {
-                    showToast('Error al guardar. Intentalo de nuevo.');
-                }
-            } catch (e) {
-                showToast('Error de conexion');
-            }
-
+                showToast(res.ok ? 'Configuracion guardada. La IA se actualiza al instante.' : 'Error al guardar.');
+            } catch (e) { showToast('Error de conexion'); }
             btn.disabled = false;
             btn.textContent = 'Guardar Cambios';
         }
@@ -305,25 +355,23 @@
         }
 
         const VOCES_DISPONIBLES = [
-            { id: 'openai_alloy', provider: 'openai', voiceId: 'alloy', icon: '👩', name: 'Alloy', desc: 'Femenina, profesional' },
-            { id: 'openai_echo', provider: 'openai', voiceId: 'echo', icon: '👨', name: 'Echo', desc: 'Masculina, calida' },
-            { id: 'openai_nova', provider: 'openai', voiceId: 'nova', icon: '👩‍💼', name: 'Nova', desc: 'Femenina, cercana' },
-            { id: 'openai_onyx', provider: 'openai', voiceId: 'onyx', icon: '🧔', name: 'Onyx', desc: 'Masculina, grave' },
-            { id: 'openai_shimmer', provider: 'openai', voiceId: 'shimmer', icon: '👱‍♀️', name: 'Shimmer', desc: 'Femenina, suave' },
-            { id: 'openai_fable', provider: 'openai', voiceId: 'fable', icon: '🧑', name: 'Fable', desc: 'Neutra, versatil' },
+            { id: 'openai_alloy', icon: '👩', name: 'Alloy', desc: 'Femenina, profesional' },
+            { id: 'openai_echo', icon: '👨', name: 'Echo', desc: 'Masculina, calida' },
+            { id: 'openai_nova', icon: '👩‍💼', name: 'Nova', desc: 'Femenina, cercana' },
+            { id: 'openai_onyx', icon: '🧔', name: 'Onyx', desc: 'Masculina, grave' },
+            { id: 'openai_shimmer', icon: '👱‍♀️', name: 'Shimmer', desc: 'Femenina, suave' },
+            { id: 'openai_fable', icon: '🧑', name: 'Fable', desc: 'Neutra, versatil' },
         ];
-
         let selectedVoiceId = '';
 
         function renderVoiceGrid(currentVoice) {
             const grid = document.getElementById('voiceGrid');
-            grid.innerHTML = VOCES_DISPONIBLES.map(v => `
-                <div class="voice-option ${v.id === currentVoice ? 'selected' : ''}" onclick="seleccionarVoz('${v.id}')">
-                    <div class="voice-icon">${v.icon}</div>
-                    <div class="voice-name">${v.name}</div>
-                    <div class="voice-desc">${v.desc}</div>
-                </div>
-            `).join('');
+            grid.innerHTML = VOCES_DISPONIBLES.map(v =>
+                '<div class="voice-option ' + (v.id === currentVoice ? 'selected' : '') + '" onclick="seleccionarVoz(\'' + v.id + '\')">' +
+                '<div class="voice-icon">' + v.icon + '</div>' +
+                '<div class="voice-name">' + v.name + '</div>' +
+                '<div class="voice-desc">' + v.desc + '</div></div>'
+            ).join('');
         }
 
         async function seleccionarVoz(voiceId) {
@@ -335,17 +383,8 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ voz_asistente: voiceId })
                 });
-                if (res.ok) {
-                    showToast('Voz actualizada');
-                }
+                if (res.ok) showToast('Voz actualizada');
             } catch (e) {}
-        }
-
-        // Auto-acceso si viene con ?id=
-        const preId = getClienteIdFromURL();
-        if (preId) {
-            document.getElementById('inputClienteId').value = preId;
-            acceder();
         }
     </script>
 </body>

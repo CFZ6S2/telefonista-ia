@@ -23,6 +23,7 @@ def verificar_admin_api_key(request: Request, api_key: str = Depends(API_KEY_HEA
     if auth_header.startswith("Bearer "):
         token = auth_header[7:]
         try:
+            _get_db()
             from firebase_admin import auth
             decoded = auth.verify_id_token(token)
             email = decoded.get("email", "").lower()

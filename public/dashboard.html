@@ -398,7 +398,17 @@
                 const whatsapp = c.telefono_whatsapp || c.telefono_personal || '';
                 const whatsappDisplay = whatsapp ? '<span class="small">' + escapeHtml(whatsapp) + '</span>' : '<span class="text-muted small">--</span>';
                 const nombreSafe = escapeHtml(nombre);
-                html += '<tr><td class="fw-bold">' + nombreSafe + '</td><td class="text-muted font-monospace small">' + id + '</td><td>' + whatsappDisplay + '</td><td>' + iaBadge + '</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary me-1" onclick="copiarEnlaceCliente(\'' + id + '\')" title="Copiar enlace config">🔗</button><button class="btn btn-sm btn-primary" onclick="abrirDetalleCliente(\'' + id + '\', \'' + nombreSafe + '\')">👁️ Ver</button></td></tr>';
+                const pin = c.pin_acceso ? c.pin_acceso : '0000';
+                
+                html += '<tr>' +
+                    '<td class="fw-bold">' + nombreSafe + '</td>' +
+                    '<td class="font-monospace small"><div class="text-muted">' + id + '</div><span class="badge bg-dark mt-1" style="font-size: 0.75rem;">PIN: ' + pin + '</span></td>' +
+                    '<td>' + whatsappDisplay + '</td>' +
+                    '<td>' + iaBadge + '</td>' +
+                    '<td class="text-end">' +
+                        '<button class="btn btn-sm btn-outline-secondary me-1" onclick="copiarEnlaceCliente(\'' + id + '\')" title="Copiar enlace config">🔗</button>' +
+                        '<button class="btn btn-sm btn-primary" onclick="abrirDetalleCliente(\'' + id + '\', \'' + nombreSafe + '\')">👁️ Ver</button>' +
+                    '</td></tr>';
             });
             tbody.innerHTML = html;
         }

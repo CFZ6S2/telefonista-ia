@@ -90,20 +90,12 @@ class ConfigNegocioPayload(BaseModel):
 
 
 @router.get("/config/{cliente_id}")
-def obtener_config_negocio(cliente_id: str, pin: str = None):
+def obtener_config_negocio(cliente_id: str, pin: str = None, token: str = None):
+    from app.main import verificar_cliente
+    verificar_cliente(cliente_id, pin=pin, token=token)
     db = _get_db()
-    if not db:
-        raise HTTPException(status_code=503, detail="Base de datos no disponible")
     doc = db.collection("clientes").document(cliente_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
     data = doc.to_dict()
-
-    stored_pin = data.get("pin_acceso")
-    if not stored_pin:
-        raise HTTPException(status_code=403, detail="Acceso no configurado. Contacta al administrador.")
-    if stored_pin != pin:
-        raise HTTPException(status_code=401, detail="PIN incorrecto")
 
     return {
         "cliente_id": cliente_id,
@@ -121,20 +113,9 @@ def obtener_config_negocio(cliente_id: str, pin: str = None):
 
 
 @router.post("/config/{cliente_id}")
-def guardar_config_negocio(cliente_id: str, payload: ConfigNegocioPayload, pin: str = None):
-    db = _get_db()
-    if not db:
-        raise HTTPException(status_code=503, detail="Base de datos no disponible")
-    doc = db.collection("clientes").document(cliente_id).get()
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Cliente no encontrado")
-        
-    data = doc.to_dict()
-    stored_pin = data.get("pin_acceso")
-    if not stored_pin:
-        raise HTTPException(status_code=403, detail="Acceso no configurado. Contacta al administrador.")
-    if stored_pin != pin:
-        raise HTTPException(status_code=401, detail="PIN incorrecto")
+def guardar_config_negocio(cliente_id: str, payload: ConfigNegocioPayload, pin: str = None, token: str = None):
+    from app.main import verificar_cliente
+    verificar_cliente(cliente_id, pin=pin, token=token)
 
     try:
         db.collection("clientes").document(cliente_id).set(

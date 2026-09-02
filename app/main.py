@@ -51,32 +51,45 @@ def listar_citas(cliente_id: str = None):
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 
 from fastapi import HTTPException
+import firebase_admin.auth as firebase_auth
 
-def verificar_pin_cliente(cliente_id: str, pin: str):
+def verificar_cliente(cliente_id: str, pin: str = None, token: str = None):
     from app.database import _get_db
     db = _get_db()
     if not db: raise HTTPException(status_code=503, detail="BD no disponible")
     doc = db.collection("clientes").document(cliente_id).get()
     if not doc.exists: raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    if doc.to_dict().get("pin_acceso") != pin:
-        raise HTTPException(status_code=401, detail="PIN incorrecto")
-    return True
+    data = doc.to_dict()
 
-# Client-facing endpoints (Require PIN)
+    if token:
+        try:
+            decoded = firebase_auth.verify_id_token(token)
+            email = decoded.get("email", "").lower().strip()
+            if email and email == data.get("email", "").lower().strip():
+                return True
+        except Exception:
+            pass
+        raise HTTPException(status_code=401, detail="Token no válido")
+
+    if pin and data.get("pin_acceso") == pin:
+        return True
+
+    raise HTTPException(status_code=401, detail="Acceso no autorizado")
+
 @app.get("/api/v1/client/leads/{cliente_id}")
-def listar_leads_cliente(cliente_id: str, pin: str):
-    verificar_pin_cliente(cliente_id, pin)
+def listar_leads_cliente(cliente_id: str, pin: str = None, token: str = None):
+    verificar_cliente(cliente_id, pin=pin, token=token)
     return {"leads": obtener_leads(cliente_id=cliente_id)}
 
 @app.get("/api/v1/client/citas/{cliente_id}")
-def listar_citas_cliente(cliente_id: str, pin: str):
-    verificar_pin_cliente(cliente_id, pin)
+def listar_citas_cliente(cliente_id: str, pin: str = None, token: str = None):
+    verificar_cliente(cliente_id, pin=pin, token=token)
     from app.database import obtener_citas
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 
 @app.get("/api/v1/client/conversaciones/{cliente_id}")
-def listar_conversaciones_cliente(cliente_id: str, pin: str):
-    verificar_pin_cliente(cliente_id, pin)
+def listar_conversaciones_cliente(cliente_id: str, pin: str = None, token: str = None):
+    verificar_cliente(cliente_id, pin=pin, token=token)
     from app.database import _get_db, _firestore_direction
     db = _get_db()
     if not db: return {"conversaciones": []}
@@ -99,8 +112,8 @@ def listar_conversaciones_cliente(cliente_id: str, pin: str):
         return {"conversaciones": []}
 
 @app.get("/api/v1/client/whatsapp/status/{cliente_id}")
-async def get_whatsapp_status(cliente_id: str, pin: str):
-    verificar_pin_cliente(cliente_id, pin)
+async def get_whatsapp_status(cliente_id: str, pin: str = None, token: str = None):
+    verificar_cliente(cliente_id, pin=pin, token=token)
     from app.services.evolution_manager import obtener_estado_instancia_evolution, obtener_qr_instancia_evolution
     estado = await obtener_estado_instancia_evolution(cliente_id)
     state_str = estado.get("instance", {}).get("state", "unknown")
@@ -119,8 +132,8 @@ async def get_whatsapp_status(cliente_id: str, pin: str):
     }
 
 @app.get("/api/v1/client/conversaciones/{cliente_id}/{remitente}")
-def obtener_mensajes_conversacion_cliente(cliente_id: str, remitente: str, pin: str, limite: int = 50):
-    verificar_pin_cliente(cliente_id, pin)
+def obtener_mensajes_conversacion_cliente(cliente_id: str, remitente: str, pin: str = None, token: str = None, limite: int = 50):
+    verificar_cliente(cliente_id, pin=pin, token=token)
     from app.database import _get_db
     db = _get_db()
     if not db: return {"mensajes": []}

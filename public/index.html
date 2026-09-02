@@ -17,11 +17,14 @@
         .btn { width: 100%; padding: 14px; font-size: 16px; font-weight: 600; border: none; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
         .btn-whatsapp { background: #25d366; color: #fff; }
         .btn-whatsapp:hover { background: #20b858; }
-        
+        .btn-google { background: #fff; color: #333; border: 2px solid #e5e7eb; font-size: 15px; }
+        .btn-google:hover { background: #f8f9fa; border-color: #d1d5db; }
+        .btn-google img { width: 20px; height: 20px; }
+
         .switch-container { display: flex; align-items: center; justify-content: space-between; padding: 16px; background: #f8f9fa; border-radius: 12px; border: 1px solid #e5e7eb; }
         .switch-text h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
         .switch-text p { font-size: 13px; color: #6b7280; }
-        
+
         .toggle-switch { position: relative; width: 60px; height: 34px; }
         .toggle-switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
@@ -31,14 +34,10 @@
         input:checked + .slider:before { transform: translateX(26px); }
 
         .loader { display: none; text-align: center; margin-top: 10px; font-size: 14px; color: #6b7280; }
-        
+
         #accessPanel { display: block; }
         #mainPanel { display: none; }
-        
-        .input-group { display: flex; flex-direction: column; gap: 10px; }
-        .input-group input { padding: 12px; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
-        .input-group button { background: #075e54; color: white; }
-        
+
         .error-msg { color: #dc3545; font-size: 14px; text-align: center; margin-bottom: 10px; display: none; }
     </style>
 </head>
@@ -46,20 +45,19 @@
 
 <div class="container">
     <div style="text-align: center; margin-bottom: 20px; font-size: 24px;">🤖 Telefonista IA</div>
-    
+
     <!-- Login screen -->
     <div class="card" id="accessPanel">
         <div class="card-header">
-            <h1>Acceso de Cliente</h1>
-            <p>Introduce tus credenciales</p>
+            <h1>Acceso Privado</h1>
+            <p>Entra con tu cuenta de Google</p>
         </div>
         <div class="card-body">
-            <div class="error-msg" id="accessError">Credenciales no válidas</div>
-            <div class="input-group">
-                <input type="text" id="inputClienteId" placeholder="ID (Ej: mi_empresa)">
-                <input type="password" id="inputPin" placeholder="PIN (4 dígitos)" onkeydown="if(event.key==='Enter')acceder()">
-                <button class="btn" onclick="acceder()">Entrar</button>
-            </div>
+            <div class="error-msg" id="accessError"></div>
+            <button class="btn btn-google" onclick="loginConGoogle()">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+                Iniciar sesión con Google
+            </button>
         </div>
     </div>
 
@@ -67,10 +65,10 @@
     <div class="card" id="mainPanel">
         <div class="card-header">
             <h1 id="empresaName">Mi Negocio</h1>
-            <p>Panel de Control Simplificado</p>
+            <p>Panel de Control</p>
         </div>
         <div class="card-body">
-            
+
             <div id="instruccionesDesvio" style="display:none; background:#e0f2fe; border:1px solid #bae6fd; padding:16px; border-radius:12px; color:#0369a1; text-align:center; font-size:14px; margin-bottom: 10px;">
                 <p style="margin-bottom:8px; font-weight:600;">📞 ¿Cómo desviar tus llamadas a la IA?</p>
                 <p>Marca en tu teléfono habitual este código y pulsa llamar:</p>
@@ -81,7 +79,7 @@
             <button class="btn btn-whatsapp" onclick="abrirConectar()">
                 <span>📱</span> Conectar / Actualizar WhatsApp
             </button>
-            
+
             <div class="switch-container">
                 <div class="switch-text">
                     <h3>Estado de la IA</h3>
@@ -92,11 +90,11 @@
                     <span class="slider"></span>
                 </label>
             </div>
-            
+
             <div class="loader" id="loader">Guardando...</div>
 
             <hr style="margin: 20px 0;">
-            
+
             <h4>📊 Mis Clientes y Conversaciones</h4>
             <div style="display:flex; flex-wrap:wrap; gap:20px;">
                 <div style="flex:1; min-width:300px;">
@@ -124,7 +122,11 @@
                 </div>
             </div>
 
-            <!-- Modal para ver chat (simulado con un div sobrepuesto) -->
+            <div style="text-align:center; margin-top:16px;">
+                <button onclick="cerrarSesion()" style="background:none; border:none; color:#dc3545; cursor:pointer; font-size:14px;">Cerrar sesión</button>
+            </div>
+
+            <!-- Modal para ver chat -->
             <div id="chatViewer" style="display:none; position:fixed; top:10%; left:10%; width:80%; height:80%; background:white; border:2px solid #333; border-radius:12px; z-index:9999; flex-direction:column; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
                 <div style="padding:10px; background:#075e54; color:white; font-weight:bold; display:flex; justify-content:space-between;">
                     <span id="chatViewerTitle">Chat</span>
@@ -137,64 +139,95 @@
     </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBvzPjb08kal71CYBtaEbd4NXM_ZscG24s",
+        authDomain: "telefonista-web-app.firebaseapp.com",
+        projectId: "telefonista-web-app",
+        storageBucket: "telefonista-web-app.firebasestorage.app",
+        messagingSenderId: "5745604345",
+        appId: "1:5745604345:web:ce95d46abf55183fc7d428"
+    };
+    firebase.initializeApp(firebaseConfig);
+
     const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://telefonista-api.duckdns.org";
     let currentClienteId = null;
-    let currentPin = null;
+    let _idToken = null;
 
-    function getClienteIdFromURL() {
-        const params = new URLSearchParams(window.location.search);
-        return params.get('id') || '';
+    async function getAuthParam() {
+        const user = firebase.auth().currentUser;
+        if (!user) return '';
+        _idToken = await user.getIdToken();
+        return `token=${encodeURIComponent(_idToken)}`;
     }
 
-    async function acceder() {
-        const id = (document.getElementById('inputClienteId').value || '').trim().toLowerCase().replace(/\s+/g, '_');
-        const pin = document.getElementById('inputPin').value.trim();
-        if (!id) return;
+    function loginConGoogle() {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        firebase.auth().signInWithPopup(provider).catch(err => {
+            const errorDiv = document.getElementById('accessError');
+            errorDiv.style.display = 'block';
+            if (err.code === 'auth/popup-closed-by-user') {
+                errorDiv.textContent = 'Ventana cerrada. Inténtalo de nuevo.';
+            } else {
+                errorDiv.textContent = 'Error al iniciar sesión: ' + err.message;
+            }
+        });
+    }
+
+    function cerrarSesion() {
+        firebase.auth().signOut();
+        currentClienteId = null;
+        _idToken = null;
+        document.getElementById('mainPanel').style.display = 'none';
+        document.getElementById('accessPanel').style.display = 'block';
         document.getElementById('accessError').style.display = 'none';
+    }
+
+    firebase.auth().onAuthStateChanged(async (user) => {
+        if (!user) return;
+        _idToken = await user.getIdToken();
 
         try {
-            const urlParams = pin ? `?pin=${pin}` : '';
-            const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${id}${urlParams}`);
+            const res = await fetch(`${API_BASE}/api/v1/onboarding/mi-empresa?email=${encodeURIComponent(user.email)}`);
             if (!res.ok) {
-                document.getElementById('accessError').style.display = 'block';
+                const errorDiv = document.getElementById('accessError');
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = 'No hay ningún negocio registrado con tu cuenta de Google.';
+                firebase.auth().signOut();
                 return;
             }
             const data = await res.json();
-            currentClienteId = id;
-            currentPin = pin;
-            
-            // update UI
+            currentClienteId = data.cliente_id;
+
             document.getElementById('accessPanel').style.display = 'none';
             document.getElementById('mainPanel').style.display = 'block';
             document.getElementById('empresaName').textContent = data.nombre_empresa || currentClienteId;
-            
-            const iaActiva = data.ia_activa !== false; // defaults to true
+
+            const iaActiva = data.ia_activa !== false;
             document.getElementById('iaToggle').checked = iaActiva;
             updateStatusText(iaActiva);
-            
+
             if (data.telefono_voz) {
                 const telSeguro = data.telefono_voz.replace(/\s+/g, '');
                 document.getElementById('instruccionesDesvio').style.display = 'block';
                 document.getElementById('codigoDesvio').textContent = `**21*${telSeguro}#`;
             }
 
-            const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?id=' + id;
-            window.history.pushState({path:newurl},'',newurl);
-
-            // Cargar datos CRM
             cargarDatosCRM();
-
         } catch (e) {
-            document.getElementById('accessError').textContent = 'Error de conexión';
-            document.getElementById('accessError').style.display = 'block';
+            const errorDiv = document.getElementById('accessError');
+            errorDiv.textContent = 'Error de conexión con el servidor.';
+            errorDiv.style.display = 'block';
+            firebase.auth().signOut();
         }
-    }
+    });
 
     async function cargarDatosCRM() {
+        const auth = await getAuthParam();
         try {
-            // Cargar leads
-            const resLeads = await fetch(`${API_BASE}/api/v1/client/leads/${currentClienteId}?pin=${currentPin}`);
+            const resLeads = await fetch(`${API_BASE}/api/v1/client/leads/${currentClienteId}?${auth}`);
             if (resLeads.ok) {
                 const dataLeads = await resLeads.json();
                 const tbody = document.querySelector("#tablaLeads tbody");
@@ -212,8 +245,7 @@
                 }
             }
 
-            // Cargar conversaciones
-            const resConvs = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}?pin=${currentPin}`);
+            const resConvs = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}?${auth}`);
             if (resConvs.ok) {
                 const dataConvs = await resConvs.json();
                 const div = document.getElementById("listaConversaciones");
@@ -239,7 +271,7 @@
     }
 
     function escapeHTML(str) {
-        return str.replace(/[&<>'"]/g, 
+        return str.replace(/[&<>'"]/g,
             tag => ({
                 '&': '&amp;',
                 '<': '&lt;',
@@ -255,9 +287,10 @@
         document.getElementById('chatViewerTitle').textContent = `Chat con ${remitente}`;
         const body = document.getElementById('chatViewerBody');
         body.innerHTML = '<div style="text-align:center; margin-top:20px;">Cargando mensajes...</div>';
-        
+
+        const auth = await getAuthParam();
         try {
-            const res = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}/${remitente}?pin=${currentPin}`);
+            const res = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}/${remitente}?${auth}`);
             if (res.ok) {
                 const data = await res.json();
                 body.innerHTML = '';
@@ -282,8 +315,8 @@
     }
 
     function updateStatusText(isActive) {
-        document.getElementById('iaStatusText').textContent = isActive 
-            ? "La IA está activada y respondiendo" 
+        document.getElementById('iaStatusText').textContent = isActive
+            ? "La IA está activada y respondiendo"
             : "La IA está pausada (apagada)";
     }
 
@@ -291,17 +324,17 @@
         const isActive = document.getElementById('iaToggle').checked;
         updateStatusText(isActive);
         document.getElementById('loader').style.display = 'block';
-        
+
+        const auth = await getAuthParam();
         try {
-            await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}?pin=${currentPin}`, {
+            await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}?${auth}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ia_activa: isActive })
             });
         } catch(e) {
             console.error(e);
-            alert("Error al guardar el estado. Inténtalo de nuevo.");
-            // revert
+            alert("Error al guardar. Inténtalo de nuevo.");
             document.getElementById('iaToggle').checked = !isActive;
             updateStatusText(!isActive);
         }
@@ -321,13 +354,6 @@
         }).catch(err => {
             console.error('Error copiando', err);
         });
-    }
-
-    // Auto-login
-    const preId = getClienteIdFromURL();
-    if (preId) {
-        document.getElementById('inputClienteId').value = preId;
-        acceder();
     }
 </script>
 </body>

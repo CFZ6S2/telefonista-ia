@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from typing import List, Optional
@@ -14,13 +14,32 @@ router = APIRouter()
 
 API_KEY_HEADER = APIKeyHeader(name="X-API-Key", auto_error=False)
 
-def verificar_admin_api_key(api_key: str = Depends(API_KEY_HEADER)):
+def _get_admin_emails():
+    raw = getattr(settings, "ADMIN_EMAILS", "")
+    return [e.strip().lower() for e in raw.split(",") if e.strip()]
+
+def verificar_admin_api_key(request: Request, api_key: str = Depends(API_KEY_HEADER)):
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            from firebase_admin import auth
+            decoded = auth.verify_id_token(token)
+            email = decoded.get("email", "").lower()
+            allowed = _get_admin_emails()
+            if allowed and email not in allowed:
+                raise HTTPException(status_code=403, detail=f"Email {email} no autorizado como admin")
+            return True
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.warning(f"Firebase token verification failed: {e}")
+            raise HTTPException(status_code=401, detail="Token de Firebase inválido o expirado")
+
     admin_secret = getattr(settings, "ADMIN_SECRET_KEY", "")
-    if not admin_secret:
-        raise HTTPException(status_code=500, detail="Server Error: ADMIN_SECRET_KEY no configurada en el servidor")
-    if api_key != admin_secret:
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Admin API Key")
-    return True
+    if admin_secret and api_key == admin_secret:
+        return True
+    raise HTTPException(status_code=401, detail="Unauthorized: envía Bearer token o X-API-Key válida")
 
 class ProductoItem(BaseModel):
     nombre: str

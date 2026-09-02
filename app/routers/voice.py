@@ -1,7 +1,10 @@
 from fastapi import APIRouter, Request
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
-from app.database import buscar_en_inventario, agendar_cita, guardar_mensaje_historial, obtener_historial_conversacion, obtener_estado_ia, _get_db
+from app.database import (
+    buscar_en_inventario_async, agendar_cita_async, guardar_mensaje_historial_async, 
+    obtener_historial_conversacion_async, obtener_estado_ia_async, get_cliente_doc_async
+)
 
 logger = logging.getLogger(__name__)
 
@@ -23,22 +26,18 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     type_event = message.get("type")
 
     if type_event == "assistant-request":
-        db = _get_db()
         telefono_personal = ""
         nombre_empresa = cliente_id
         voz_asistente = ""
-        if db:
-            try:
-                doc = db.collection("clientes").document(cliente_id).get()
-                if doc.exists:
-                    data = doc.to_dict()
-                    telefono_personal = data.get("telefono_personal", "")
-                    nombre_empresa = data.get("nombre_empresa", cliente_id)
-                    voz_asistente = data.get("voz_asistente", "")
-            except Exception:
-                pass
+        
+        data = await get_cliente_doc_async(cliente_id)
+        if data:
+            telefono_personal = data.get("telefono_personal", "")
+            nombre_empresa = data.get("nombre_empresa", cliente_id)
+            voz_asistente = data.get("voz_asistente", "")
 
-        if not obtener_estado_ia(cliente_id):
+        ia_activa = await obtener_estado_ia_async(cliente_id)
+        if not ia_activa:
             if telefono_personal:
                 return {
                     "messageResponse": {
@@ -83,9 +82,9 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
             args = function_data.get("arguments", {})
 
             if name == "consultar_inventario":
-                res = buscar_en_inventario(args.get("consulta", ""), cliente_id=cliente_id)
+                res = await buscar_en_inventario_async(args.get("consulta", ""), cliente_id=cliente_id)
             elif name == "agendar_cita_visita":
-                res = agendar_cita(
+                res = await agendar_cita_async(
                     nombre=args.get("nombre", "Cliente Voz"),
                     telefono=args.get("telefono", "Voz"),
                     fecha=args.get("fecha", ""),
@@ -107,14 +106,14 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
     caller_number = body.get("call", {}).get("customer", {}).get("number", "voz_desconocido")
 
     if transcript:
-        guardar_mensaje_historial(cliente_id, caller_number, "user", transcript)
+        await guardar_mensaje_historial_async(cliente_id, caller_number, "user", transcript)
 
-        historial = obtener_historial_conversacion(cliente_id, caller_number, limite=6)
+        historial = await obtener_historial_conversacion_async(cliente_id, caller_number, limite=6)
         if not historial:
             historial = [{"role": "user", "content": transcript}]
 
         respuesta = await procesar_mensaje_ia(historial, canal="voz", cliente_id=cliente_id)
-        guardar_mensaje_historial(cliente_id, caller_number, "assistant", respuesta)
+        await guardar_mensaje_historial_async(cliente_id, caller_number, "assistant", respuesta)
         return {"response": respuesta}
 
     return {"status": "ok"}

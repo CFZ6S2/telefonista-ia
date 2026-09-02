@@ -138,7 +138,8 @@ async def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "what
             model=settings.DEEPSEEK_MODEL,
             messages=mensajes_con_system,
             tools=HERRAMIENTAS_IA,
-            tool_choice="auto"
+            tool_choice="auto",
+            timeout=15.0
         )
 
         response_message = response.choices[0].message
@@ -183,7 +184,8 @@ async def procesar_mensaje_ia(mensajes: List[Dict[str, str]], canal: str = "what
 
             segunda_respuesta = await client.chat.completions.create(
                 model=settings.DEEPSEEK_MODEL,
-                messages=mensajes_con_system
+                messages=mensajes_con_system,
+                timeout=15.0
             )
             return segunda_respuesta.choices[0].message.content
 

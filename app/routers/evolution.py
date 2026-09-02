@@ -2,7 +2,12 @@ from fastapi import APIRouter, Request, HTTPException
 import httpx
 import logging
 from app.services.ai_brain import procesar_mensaje_ia
-from app.database import obtener_historial_conversacion, guardar_mensaje_historial, obtener_estado_ia, cambiar_estado_ia
+from app.database import (
+    obtener_historial_conversacion_async, guardar_mensaje_historial_async, 
+    obtener_estado_ia_async
+)
+from fastapi.concurrency import run_in_threadpool
+from app.database import cambiar_estado_ia
 from app.config import settings
 
 logger = logging.getLogger(__name__)
@@ -11,6 +16,9 @@ router = APIRouter()
 
 EVOLUTION_API_BASE = settings.EVOLUTION_API_BASE
 EVOLUTION_GLOBAL_KEY = settings.EVOLUTION_API_KEY
+
+async def cambiar_estado_ia_async(*args, **kwargs):
+    return await run_in_threadpool(cambiar_estado_ia, *args, **kwargs)
 
 @router.post("/evolution-webhook/{cliente_id}")
 async def webhook_evolution_whatsapp(cliente_id: str, request: Request):
@@ -40,26 +48,27 @@ async def webhook_evolution_whatsapp(cliente_id: str, request: Request):
                 if text and remote_jid:
                     text_lower = text.strip().lower()
                     if text_lower in ("!ia off", "/off", "!ia apagar"):
-                        cambiar_estado_ia(cliente_id, False)
+                        await cambiar_estado_ia_async(cliente_id, False)
                         await enviar_mensaje_evolution_api(instance, remote_jid, "IA desactivada. Tienes el control manual. Escribe !ia on para reactivar.")
                         return {"status": "ia_disabled"}
                     if text_lower in ("!ia on", "/on", "!ia encender"):
-                        cambiar_estado_ia(cliente_id, True)
+                        await cambiar_estado_ia_async(cliente_id, True)
                         await enviar_mensaje_evolution_api(instance, remote_jid, "IA activada y operando. Respondo a todos los mensajes automaticamente.")
                         return {"status": "ia_enabled"}
 
-                    guardar_mensaje_historial(cliente_id, remote_jid, "user", text)
+                    await guardar_mensaje_historial_async(cliente_id, remote_jid, "user", text)
 
-                    if not obtener_estado_ia(cliente_id):
+                    ia_activa = await obtener_estado_ia_async(cliente_id)
+                    if not ia_activa:
                         logger.info(f"[IA OFF] Mensaje de {remote_jid} ignorado para {cliente_id} (modo manual)")
                         return {"status": "ia_disabled", "number": remote_jid}
 
-                    historial = obtener_historial_conversacion(cliente_id, remote_jid, limite=8)
+                    historial = await obtener_historial_conversacion_async(cliente_id, remote_jid, limite=8)
                     if not historial:
                         historial = [{"role": "user", "content": text}]
 
                     respuesta_ia = await procesar_mensaje_ia(historial, canal="whatsapp", cliente_id=cliente_id)
-                    guardar_mensaje_historial(cliente_id, remote_jid, "assistant", respuesta_ia)
+                    await guardar_mensaje_historial_async(cliente_id, remote_jid, "assistant", respuesta_ia)
                     await enviar_mensaje_evolution_api(instance, remote_jid, respuesta_ia)
 
                     return {

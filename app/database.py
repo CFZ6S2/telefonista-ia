@@ -1,6 +1,7 @@
 from typing import List, Dict, Optional, Any
 from datetime import datetime
 import logging
+from fastapi.concurrency import run_in_threadpool
 
 logger = logging.getLogger(__name__)
 
@@ -193,3 +194,28 @@ def obtener_citas(cliente_id: str = None) -> List[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Error leyendo citas de Firestore: {e}")
         return []
+# --- Async Wrappers ---
+async def buscar_en_inventario_async(*args, **kwargs):
+    return await run_in_threadpool(buscar_en_inventario, *args, **kwargs)
+
+async def agendar_cita_async(*args, **kwargs):
+    return await run_in_threadpool(agendar_cita, *args, **kwargs)
+
+async def guardar_mensaje_historial_async(*args, **kwargs):
+    return await run_in_threadpool(guardar_mensaje_historial, *args, **kwargs)
+
+async def obtener_historial_conversacion_async(*args, **kwargs):
+    return await run_in_threadpool(obtener_historial_conversacion, *args, **kwargs)
+
+async def obtener_estado_ia_async(*args, **kwargs):
+    return await run_in_threadpool(obtener_estado_ia, *args, **kwargs)
+
+async def get_cliente_doc_async(cliente_id: str):
+    def fetch():
+        db = _get_db()
+        if db:
+            doc = db.collection("clientes").document(cliente_id).get()
+            if doc.exists:
+                return doc.to_dict()
+        return None
+    return await run_in_threadpool(fetch)

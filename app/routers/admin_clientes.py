@@ -101,7 +101,8 @@ Texto a analizar:
                 {"role": "system", "content": "Eres un extractor de datos JSON."},
                 {"role": "user", "content": prompt}
             ],
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"},
+            timeout=30.0
         )
         import json
         resultado = json.loads(response.choices[0].message.content)
@@ -126,6 +127,9 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         system_prompt=payload.system_prompt
     )
 
+    import random
+    pin_acceso = str(random.randint(1000, 9999))
+    
     db = _get_db()
     if db:
         try:
@@ -138,13 +142,14 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
                 "vapi_status": res_vapi,
                 "evolution_status": res_evolution.get("status"),
                 "ia_activa": True,
+                "pin_acceso": pin_acceso,
                 "creado_el": _server_timestamp()
             })
 
             for item in items_dict:
                 doc_ref.collection("inventario").add(item)
 
-            logger.info(f"[Firestore] Cliente {cliente_id} registrado.")
+            logger.info(f"[Firestore] Cliente {cliente_id} registrado con PIN {pin_acceso}.")
         except Exception as e:
             logger.error(f"Error guardando en Firestore: {e}")
     else:
@@ -154,6 +159,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
         "status": "success",
         "message": f"Cliente '{payload.nombre_empresa}' dado de alta y conectado a WhatsApp y Vapi.",
         "cliente_id": cliente_id,
+        "pin_acceso": pin_acceso,
         "evolution_whatsapp": res_evolution,
         "vapi_voz": res_vapi,
         "webhook_whatsapp_url": f"{vps_base_url}/api/v1/whatsapp/evolution-webhook/{cliente_id}",

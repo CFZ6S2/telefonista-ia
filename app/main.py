@@ -50,6 +50,50 @@ def listar_leads(cliente_id: str = None):
 def listar_citas(cliente_id: str = None):
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 
+# Client-facing endpoints (No Admin Key required)
+@app.get("/api/v1/client/leads/{cliente_id}")
+def listar_leads_cliente(cliente_id: str):
+    return {"leads": obtener_leads(cliente_id=cliente_id)}
+
+@app.get("/api/v1/client/citas/{cliente_id}")
+def listar_citas_cliente(cliente_id: str):
+    from app.services.crm import obtener_citas
+    return {"citas": obtener_citas(cliente_id=cliente_id)}
+
+@app.get("/api/v1/client/conversaciones/{cliente_id}")
+def listar_conversaciones_cliente(cliente_id: str):
+    from app.database import _get_db, _firestore_direction
+    db = _get_db()
+    if not db: return {"conversaciones": []}
+    try:
+        convs_ref = db.collection("clientes").document(cliente_id).collection("conversaciones")
+        contactos = []
+        for doc in convs_ref.stream():
+            last_msg = None
+            msgs = doc.reference.collection("mensajes").order_by("timestamp", direction=_firestore_direction()).limit(1).stream()
+            for m in msgs: last_msg = m.to_dict()
+            contactos.append({
+                "remitente": doc.id,
+                "ultimo_mensaje": last_msg.get("content", "") if last_msg else "",
+                "ultimo_role": last_msg.get("role", "") if last_msg else "",
+                "timestamp": str(last_msg.get("timestamp", "")) if last_msg else ""
+            })
+        contactos.sort(key=lambda x: x["timestamp"], reverse=True)
+        return {"conversaciones": contactos}
+    except Exception:
+        return {"conversaciones": []}
+
+@app.get("/api/v1/client/conversaciones/{cliente_id}/{remitente}")
+def obtener_mensajes_conversacion_cliente(cliente_id: str, remitente: str, limite: int = 50):
+    from app.database import _get_db
+    db = _get_db()
+    if not db: return {"mensajes": []}
+    try:
+        msgs_ref = db.collection("clientes").document(cliente_id).collection("conversaciones").document(remitente).collection("mensajes").order_by("timestamp").limit(limite)
+        mensajes = [{"role": doc.to_dict().get("role", "user"), "content": doc.to_dict().get("content", ""), "timestamp": str(doc.to_dict().get("timestamp", ""))} for doc in msgs_ref.stream()]
+        return {"mensajes": mensajes, "remitente": remitente, "cliente_id": cliente_id}
+    except Exception:
+        return {"mensajes": []}
+
 if os.path.exists("public"):
     app.mount("/dashboard", StaticFiles(directory="public", html=True), name="dashboard")
-

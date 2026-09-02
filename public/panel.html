@@ -93,6 +93,45 @@
             </div>
             
             <div class="loader" id="loader">Guardando...</div>
+
+            <hr style="margin: 20px 0;">
+            
+            <h4>📊 Mis Clientes y Conversaciones</h4>
+            <div style="display:flex; flex-wrap:wrap; gap:20px;">
+                <div style="flex:1; min-width:300px;">
+                    <div style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:10px; max-height:400px; overflow-y:auto;">
+                        <h5 style="margin-top:0;">Últimas Conversaciones</h5>
+                        <div id="listaConversaciones">Cargando...</div>
+                    </div>
+                </div>
+                <div style="flex:1; min-width:300px;">
+                    <div style="background:#f8f9fa; border:1px solid #ddd; border-radius:8px; padding:10px; max-height:400px; overflow-y:auto;">
+                        <h5 style="margin-top:0;">Leads Captados</h5>
+                        <table style="width:100%; border-collapse: collapse; font-size: 13px;" id="tablaLeads">
+                            <thead>
+                                <tr style="border-bottom: 1px solid #ccc; text-align: left;">
+                                    <th>Nombre</th>
+                                    <th>Teléfono</th>
+                                    <th>Interés</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td colspan="3">Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para ver chat (simulado con un div sobrepuesto) -->
+            <div id="chatViewer" style="display:none; position:fixed; top:10%; left:10%; width:80%; height:80%; background:white; border:2px solid #333; border-radius:12px; z-index:9999; display:flex; flex-direction:column; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+                <div style="padding:10px; background:#075e54; color:white; font-weight:bold; display:flex; justify-content:space-between;">
+                    <span id="chatViewerTitle">Chat</span>
+                    <button onclick="document.getElementById('chatViewer').style.display='none'" style="background:transparent; color:white; border:none; font-size:16px; cursor:pointer;">✖ Cerrar</button>
+                </div>
+                <div id="chatViewerBody" style="flex:1; overflow-y:auto; padding:15px; background:#e5ddd5;">
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -135,13 +174,91 @@
                 document.getElementById('codigoDesvio').textContent = `**21*${telSeguro}#`;
             }
 
-            // update URL so they can bookmark it
             const newurl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?id=' + id;
             window.history.pushState({path:newurl},'',newurl);
+
+            // Cargar datos CRM
+            cargarDatosCRM();
 
         } catch (e) {
             document.getElementById('accessError').textContent = 'Error de conexión';
             document.getElementById('accessError').style.display = 'block';
+        }
+    }
+
+    async function cargarDatosCRM() {
+        try {
+            // Cargar leads
+            const resLeads = await fetch(`${API_BASE}/api/v1/client/leads/${currentClienteId}`);
+            if (resLeads.ok) {
+                const dataLeads = await resLeads.json();
+                const tbody = document.querySelector("#tablaLeads tbody");
+                tbody.innerHTML = '';
+                if (dataLeads.leads.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:10px;">No hay leads todavía</td></tr>';
+                } else {
+                    dataLeads.leads.forEach(l => {
+                        tbody.innerHTML += `<tr>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.nombre || 'Desconocido'}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.telefono || ''}</td>
+                            <td style="padding:8px; border-bottom:1px solid #eee;">${l.producto_interes || ''}</td>
+                        </tr>`;
+                    });
+                }
+            }
+
+            // Cargar conversaciones
+            const resConvs = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}`);
+            if (resConvs.ok) {
+                const dataConvs = await resConvs.json();
+                const div = document.getElementById("listaConversaciones");
+                div.innerHTML = '';
+                if (dataConvs.conversaciones.length === 0) {
+                    div.innerHTML = '<p style="text-align:center; color:#666;">No hay conversaciones registradas.</p>';
+                } else {
+                    dataConvs.conversaciones.forEach(c => {
+                        const rec = c.ultimo_mensaje.substring(0, 40) + '...';
+                        div.innerHTML += `
+                            <div style="border:1px solid #ccc; padding:10px; margin-bottom:8px; border-radius:6px; cursor:pointer; background:white;" onclick="verChat('${c.remitente}')">
+                                <strong>📱 ${c.remitente}</strong><br>
+                                <span style="font-size:12px; color:#555;">${c.ultimo_role === 'assistant' ? 'IA: ' : 'User: '}${rec}</span>
+                            </div>
+                        `;
+                    });
+                }
+            }
+        } catch (e) {
+            console.error("Error cargando CRM", e);
+        }
+    }
+
+    async function verChat(remitente) {
+        document.getElementById('chatViewer').style.display = 'flex';
+        document.getElementById('chatViewerTitle').textContent = `Chat con ${remitente}`;
+        const body = document.getElementById('chatViewerBody');
+        body.innerHTML = '<div style="text-align:center; margin-top:20px;">Cargando mensajes...</div>';
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}/${remitente}`);
+            if (res.ok) {
+                const data = await res.json();
+                body.innerHTML = '';
+                data.mensajes.forEach(m => {
+                    const isIA = m.role === 'assistant';
+                    const align = isIA ? 'left' : 'right';
+                    const bg = isIA ? '#fff' : '#dcf8c6';
+                    body.innerHTML += `
+                        <div style="text-align:${align}; margin-bottom:10px;">
+                            <div style="display:inline-block; max-width:80%; background:${bg}; padding:8px 12px; border-radius:12px; text-align:left; font-size:14px; border:1px solid #ccc;">
+                                <strong>${isIA ? 'IA' : 'Cliente'}:</strong> ${m.content}
+                            </div>
+                        </div>
+                    `;
+                });
+                body.scrollTop = body.scrollHeight;
+            }
+        } catch (e) {
+            body.innerHTML = 'Error al cargar mensajes.';
         }
     }
 

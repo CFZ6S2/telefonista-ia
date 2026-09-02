@@ -48,7 +48,7 @@
             <div class="d-flex align-items-center">
                 <form onsubmit="return false;" class="m-0 p-0 me-2">
                     <input type="text" autocomplete="username" style="display:none;" aria-hidden="true">
-                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="guardarKeyYRecargar(this.value)" autocomplete="current-password">
+                    <input type="password" id="inputAdminKey" class="form-control form-control-sm" style="width:140px;" placeholder="Admin API Key" oninput="guardarKeyYRecargar(this.value)" onchange="guardarKeyYRecargar(this.value)" autocomplete="current-password">
                 </form>
                 <button class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#modalAltaCliente">⚡ Alta & Conectar APIs Automático</button>
             </div>
@@ -304,7 +304,12 @@
         };
 
         async function inicializarDashboard() {
-            const savedKey = localStorage.getItem('telefonista_admin_key') || '';
+            const inputKey = document.getElementById('inputAdminKey').value.trim();
+            let savedKey = localStorage.getItem('telefonista_admin_key') || '';
+            if (inputKey && inputKey !== savedKey) {
+                localStorage.setItem('telefonista_admin_key', inputKey);
+                savedKey = inputKey;
+            }
             if (savedKey) document.getElementById('inputAdminKey').value = savedKey;
 
             if (!savedKey) {

@@ -220,13 +220,18 @@
                 <div class="modal-body">
                     <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
                         <div class="row g-3 mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label font-weight-bold">ID Unico Cliente (ej: empresa_abc)</label>
                                 <input type="text" id="inputClienteId" class="form-control" placeholder="empresa_abc" required>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <label class="form-label font-weight-bold">Nombre de la Empresa</label>
                                 <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Nombre Comercial" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label font-weight-bold">📧 Email del Cliente</label>
+                                <input type="email" id="inputEmailCliente" class="form-control" placeholder="cliente@gmail.com" required>
+                                <div class="form-text" style="font-size: 11px;">Para que el cliente acceda a su panel con Google.</div>
                             </div>
                         </div>
                         <div class="row g-3 mb-3 p-3 bg-light rounded">
@@ -427,9 +432,11 @@
             e.preventDefault();
             const clienteId = document.getElementById("inputClienteId").value.trim().toLowerCase().replace(/\s+/g, '_');
             const nombreEmpresa = document.getElementById("inputNombreEmpresa").value.trim();
+            const emailCliente = document.getElementById("inputEmailCliente").value.trim();
             const payload = {
                 cliente_id: clienteId,
                 nombre_empresa: nombreEmpresa,
+                email: emailCliente,
                 telefono_voz: document.getElementById("inputTelVoz").value.trim(),
                 telefono_whatsapp: document.getElementById("inputTelWhatsapp").value.trim(),
                 inventario: [{

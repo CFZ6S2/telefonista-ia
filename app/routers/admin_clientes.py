@@ -52,6 +52,7 @@ class ProductoItem(BaseModel):
 class CrearClientePayload(BaseModel):
     cliente_id: str
     nombre_empresa: str
+    email: Optional[str] = ""
     telefono_voz: Optional[str] = "No configurado"
     telefono_whatsapp: Optional[str] = "No configurado"
     vapi_api_key: Optional[str] = None
@@ -78,10 +79,12 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
             doc_ref = db.collection("clientes").document(cliente_id)
             doc_ref.set({
                 "nombre_empresa": payload.nombre_empresa,
+                "email": payload.email,
                 "telefono_voz": payload.telefono_voz,
                 "telefono_whatsapp": payload.telefono_whatsapp,
                 "vapi_status": res_vapi,
                 "evolution_status": res_evolution.get("status"),
+                "ia_activa": True,
                 "creado_el": _server_timestamp()
             })
 

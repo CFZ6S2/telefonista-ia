@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código fuente
 COPY . .
 
-# Exponer el puerto de FastAPI
-EXPOSE 8000
+# Exponer el puerto (Cloud Run usa PORT=8080, VPS usa 8000)
+EXPOSE 8080
 
 # Comando para arrancar el servidor en producción
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}

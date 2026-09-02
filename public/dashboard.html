@@ -88,7 +88,7 @@
     <!-- VISTA 1: LISTADO DE CLIENTES (MASTER) -->
     <div class="container my-4 view-section active" id="viewListadoClientes">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h3 class="mb-0">🏢 Directorio de Empresas</h3>
+            <h3 class="mb-0">🏢 Directorio de Perfiles</h3>
             <button class="btn btn-primary" onclick="inicializarDashboard()">↻ Actualizar Lista</button>
         </div>
         <div class="card card-custom bg-white">
@@ -96,7 +96,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th>Nombre de Empresa</th>
+                            <th>Alias / Perfil</th>
                             <th>ID Cliente</th>
                             <th>WhatsApp</th>
                             <th>IA</th>
@@ -234,12 +234,12 @@
                     <form id="formAltaCliente" onsubmit="guardarNuevoCliente(event)">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label font-weight-bold">ID Unico Cliente (ej: empresa_abc)</label>
-                                <input type="text" id="inputClienteId" class="form-control" placeholder="empresa_abc" required>
+                                <label class="form-label font-weight-bold">ID Unico Cliente (ej: marta_bcn)</label>
+                                <input type="text" id="inputClienteId" class="form-control" placeholder="marta_bcn" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label font-weight-bold">Nombre de la Empresa</label>
-                                <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Nombre Comercial" required>
+                                <label class="form-label font-weight-bold">Alias del Perfil</label>
+                                <input type="text" id="inputNombreEmpresa" class="form-control" placeholder="Ej: Marta BCN" required>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label font-weight-bold">📧 Email del Cliente</label>
@@ -265,7 +265,7 @@
                         <hr>
                         <h6>📦 Producto / Servicio Inicial</h6>
                         <div class="row g-2 mb-2">
-                            <div class="col-md-6"><input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre Producto/Servicio" required></div>
+                            <div class="col-md-6"><input type="text" id="inputProdNombre" class="form-control form-control-sm" placeholder="Nombre Servicio" required></div>
                             <div class="col-md-6"><input type="text" id="inputProdCategoria" class="form-control form-control-sm" placeholder="Categoria" required></div>
                             <div class="col-md-4"><input type="text" id="inputProdPrecio" class="form-control form-control-sm" placeholder="Precio" required></div>
                             <div class="col-md-8"><input type="text" id="inputProdDetalles" class="form-control form-control-sm" placeholder="Detalles" required></div>
@@ -353,7 +353,7 @@
             } else {
                 overlay.style.display = 'flex';
                 userInfo.style.display = 'none';
-                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Inicia sesion para ver las empresas.</td></tr>';
+                document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Inicia sesion para ver las perfiles.</td></tr>';
             }
         });
 
@@ -361,7 +361,7 @@
             const user = firebase.auth().currentUser;
             if (!user) return;
 
-            document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Cargando empresas...</td></tr>';
+            document.getElementById("tablaDirectorio").innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">Cargando perfiles...</td></tr>';
 
             try {
                 const headers = await getAuthHeaders();
@@ -386,7 +386,7 @@
         function poblarTablaDirectorio(clientes) {
             const tbody = document.getElementById("tablaDirectorio");
             if (clientes.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">-- No hay empresas registradas --</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted p-4">-- No hay perfiles registrados --</td></tr>';
                 return;
             }
             let html = '';

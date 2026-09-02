@@ -143,6 +143,7 @@ async def dar_de_alta_cliente(payload: CrearClientePayload):
                 "evolution_status": res_evolution.get("status"),
                 "ia_activa": True,
                 "pin_acceso": pin_acceso,
+                "instrucciones_ia": payload.system_prompt,
                 "creado_el": _server_timestamp()
             })
 

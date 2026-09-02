@@ -51,12 +51,13 @@
     <div class="card" id="accessPanel">
         <div class="card-header">
             <h1>Acceso de Cliente</h1>
-            <p>Introduce el código de tu negocio</p>
+            <p>Introduce tus credenciales</p>
         </div>
         <div class="card-body">
-            <div class="error-msg" id="accessError">Código no válido</div>
+            <div class="error-msg" id="accessError">Credenciales no válidas</div>
             <div class="input-group">
-                <input type="text" id="inputClienteId" placeholder="Ej: mi_empresa" onkeydown="if(event.key==='Enter')acceder()">
+                <input type="text" id="inputClienteId" placeholder="ID (Ej: mi_empresa)">
+                <input type="password" id="inputPin" placeholder="PIN (4 dígitos)" onkeydown="if(event.key==='Enter')acceder()">
                 <button class="btn" onclick="acceder()">Entrar</button>
             </div>
         </div>
@@ -124,7 +125,7 @@
             </div>
 
             <!-- Modal para ver chat (simulado con un div sobrepuesto) -->
-            <div id="chatViewer" style="display:none; position:fixed; top:10%; left:10%; width:80%; height:80%; background:white; border:2px solid #333; border-radius:12px; z-index:9999; display:flex; flex-direction:column; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+            <div id="chatViewer" style="display:none; position:fixed; top:10%; left:10%; width:80%; height:80%; background:white; border:2px solid #333; border-radius:12px; z-index:9999; flex-direction:column; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
                 <div style="padding:10px; background:#075e54; color:white; font-weight:bold; display:flex; justify-content:space-between;">
                     <span id="chatViewerTitle">Chat</span>
                     <button onclick="document.getElementById('chatViewer').style.display='none'" style="background:transparent; color:white; border:none; font-size:16px; cursor:pointer;">✖ Cerrar</button>
@@ -139,6 +140,7 @@
 <script>
     const API_BASE = window.location.origin;
     let currentClienteId = null;
+    let currentPin = null;
 
     function getClienteIdFromURL() {
         const params = new URLSearchParams(window.location.search);
@@ -147,17 +149,20 @@
 
     async function acceder() {
         const id = (document.getElementById('inputClienteId').value || '').trim().toLowerCase().replace(/\s+/g, '_');
+        const pin = document.getElementById('inputPin').value.trim();
         if (!id) return;
         document.getElementById('accessError').style.display = 'none';
 
         try {
-            const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${id}`);
+            const urlParams = pin ? `?pin=${pin}` : '';
+            const res = await fetch(`${API_BASE}/api/v1/onboarding/config/${id}${urlParams}`);
             if (!res.ok) {
                 document.getElementById('accessError').style.display = 'block';
                 return;
             }
             const data = await res.json();
             currentClienteId = id;
+            currentPin = pin;
             
             // update UI
             document.getElementById('accessPanel').style.display = 'none';
@@ -189,7 +194,7 @@
     async function cargarDatosCRM() {
         try {
             // Cargar leads
-            const resLeads = await fetch(`${API_BASE}/api/v1/client/leads/${currentClienteId}`);
+            const resLeads = await fetch(`${API_BASE}/api/v1/client/leads/${currentClienteId}?pin=${currentPin}`);
             if (resLeads.ok) {
                 const dataLeads = await resLeads.json();
                 const tbody = document.querySelector("#tablaLeads tbody");
@@ -208,7 +213,7 @@
             }
 
             // Cargar conversaciones
-            const resConvs = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}`);
+            const resConvs = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}?pin=${currentPin}`);
             if (resConvs.ok) {
                 const dataConvs = await resConvs.json();
                 const div = document.getElementById("listaConversaciones");
@@ -232,6 +237,18 @@
         }
     }
 
+    function escapeHTML(str) {
+        return str.replace(/[&<>'"]/g, 
+            tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag)
+        );
+    }
+
     async function verChat(remitente) {
         document.getElementById('chatViewer').style.display = 'flex';
         document.getElementById('chatViewerTitle').textContent = `Chat con ${remitente}`;
@@ -239,7 +256,7 @@
         body.innerHTML = '<div style="text-align:center; margin-top:20px;">Cargando mensajes...</div>';
         
         try {
-            const res = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}/${remitente}`);
+            const res = await fetch(`${API_BASE}/api/v1/client/conversaciones/${currentClienteId}/${remitente}?pin=${currentPin}`);
             if (res.ok) {
                 const data = await res.json();
                 body.innerHTML = '';
@@ -247,10 +264,11 @@
                     const isIA = m.role === 'assistant';
                     const align = isIA ? 'left' : 'right';
                     const bg = isIA ? '#fff' : '#dcf8c6';
+                    const safeContent = escapeHTML(m.content);
                     body.innerHTML += `
                         <div style="text-align:${align}; margin-bottom:10px;">
-                            <div style="display:inline-block; max-width:80%; background:${bg}; padding:8px 12px; border-radius:12px; text-align:left; font-size:14px; border:1px solid #ccc;">
-                                <strong>${isIA ? 'IA' : 'Cliente'}:</strong> ${m.content}
+                            <div style="display:inline-block; max-width:80%; background:${bg}; padding:8px 12px; border-radius:12px; text-align:left; font-size:14px; border:1px solid #ccc; white-space:pre-wrap;">
+                                <strong>${isIA ? 'IA' : 'Cliente'}:</strong> ${safeContent}
                             </div>
                         </div>
                     `;
@@ -274,7 +292,7 @@
         document.getElementById('loader').style.display = 'block';
         
         try {
-            await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}`, {
+            await fetch(`${API_BASE}/api/v1/onboarding/config/${currentClienteId}?pin=${currentPin}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ia_activa: isActive })

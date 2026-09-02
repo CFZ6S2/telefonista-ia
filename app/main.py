@@ -50,18 +50,33 @@ def listar_leads(cliente_id: str = None):
 def listar_citas(cliente_id: str = None):
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 
-# Client-facing endpoints (No Admin Key required)
+from fastapi import HTTPException
+
+def verificar_pin_cliente(cliente_id: str, pin: str):
+    from app.database import _get_db
+    db = _get_db()
+    if not db: raise HTTPException(status_code=503, detail="BD no disponible")
+    doc = db.collection("clientes").document(cliente_id).get()
+    if not doc.exists: raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    if doc.to_dict().get("pin_acceso") != pin:
+        raise HTTPException(status_code=401, detail="PIN incorrecto")
+    return True
+
+# Client-facing endpoints (Require PIN)
 @app.get("/api/v1/client/leads/{cliente_id}")
-def listar_leads_cliente(cliente_id: str):
+def listar_leads_cliente(cliente_id: str, pin: str):
+    verificar_pin_cliente(cliente_id, pin)
     return {"leads": obtener_leads(cliente_id=cliente_id)}
 
 @app.get("/api/v1/client/citas/{cliente_id}")
-def listar_citas_cliente(cliente_id: str):
-    from app.services.crm import obtener_citas
+def listar_citas_cliente(cliente_id: str, pin: str):
+    verificar_pin_cliente(cliente_id, pin)
+    from app.database import obtener_citas
     return {"citas": obtener_citas(cliente_id=cliente_id)}
 
 @app.get("/api/v1/client/conversaciones/{cliente_id}")
-def listar_conversaciones_cliente(cliente_id: str):
+def listar_conversaciones_cliente(cliente_id: str, pin: str):
+    verificar_pin_cliente(cliente_id, pin)
     from app.database import _get_db, _firestore_direction
     db = _get_db()
     if not db: return {"conversaciones": []}
@@ -83,8 +98,29 @@ def listar_conversaciones_cliente(cliente_id: str):
     except Exception:
         return {"conversaciones": []}
 
+@app.get("/api/v1/client/whatsapp/status/{cliente_id}")
+async def get_whatsapp_status(cliente_id: str, pin: str):
+    verificar_pin_cliente(cliente_id, pin)
+    from app.services.evolution_manager import obtener_estado_instancia_evolution, obtener_qr_instancia_evolution
+    estado = await obtener_estado_instancia_evolution(cliente_id)
+    state_str = estado.get("instance", {}).get("state", "unknown")
+    
+    if state_str in ["open"]:
+        return {"status": "connected", "state": state_str}
+    
+    # If not connected, get QR code
+    qr_data = await obtener_qr_instancia_evolution(cliente_id)
+    base64_qr = qr_data.get("qrcode", {}).get("base64", "") if "qrcode" in qr_data else qr_data.get("base64", "")
+    
+    return {
+        "status": "disconnected",
+        "state": state_str,
+        "qr_base64": base64_qr
+    }
+
 @app.get("/api/v1/client/conversaciones/{cliente_id}/{remitente}")
-def obtener_mensajes_conversacion_cliente(cliente_id: str, remitente: str, limite: int = 50):
+def obtener_mensajes_conversacion_cliente(cliente_id: str, remitente: str, pin: str, limite: int = 50):
+    verificar_pin_cliente(cliente_id, pin)
     from app.database import _get_db
     db = _get_db()
     if not db: return {"mensajes": []}

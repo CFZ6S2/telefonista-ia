@@ -456,8 +456,8 @@
                 const res = await fetch(`${API_BASE}/api/v1/onboarding/qr/${currentClienteId}`);
                 if (res.ok) {
                     const data = await res.json();
-                    const qrBase64 = data.qrcode || data.base64 || data.code;
-                    if (qrBase64) {
+                    const qrBase64 = (data.qrcode && data.qrcode.base64) || data.base64 || data.qrcode || data.code;
+                    if (qrBase64 && typeof qrBase64 === 'string') {
                         const img = document.getElementById('qrImage');
                         img.src = qrBase64.startsWith('data:') ? qrBase64 : 'data:image/png;base64,' + qrBase64;
                         document.getElementById('qrContainer').style.display = 'block';

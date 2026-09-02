@@ -108,11 +108,10 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
         nombre_empresa = cliente_id
         voz_asistente = ""
 
-        data = await get_cliente_doc_async(cliente_id)
-        if data:
-            telefono_personal = data.get("telefono_personal", "")
-            nombre_empresa = data.get("nombre_empresa", cliente_id)
-            voz_asistente = data.get("voz_asistente", "")
+        data = await get_cliente_doc_async(cliente_id) or {}
+        telefono_personal = data.get("telefono_personal", "")
+        nombre_empresa = data.get("nombre_empresa", cliente_id)
+        voz_asistente = data.get("voz_asistente", "")
 
         ia_activa = await obtener_estado_ia_async(cliente_id)
         if not ia_activa:
@@ -134,22 +133,55 @@ async def voice_assistant_multi_tenant_webhook(cliente_id: str, request: Request
                         "message": f"Gracias por llamar a {nombre_empresa}. En este momento no estamos disponibles. Por favor, intentalo mas tarde o escribenos por WhatsApp."
                     }
                 }
-        if voz_asistente:
-            VOCES = {
-                "openai_alloy": {"provider": "openai", "voiceId": "alloy"},
-                "openai_echo": {"provider": "openai", "voiceId": "echo"},
-                "openai_nova": {"provider": "openai", "voiceId": "nova"},
-                "openai_onyx": {"provider": "openai", "voiceId": "onyx"},
-                "openai_shimmer": {"provider": "openai", "voiceId": "shimmer"},
-                "openai_fable": {"provider": "openai", "voiceId": "fable"},
+
+        partes = []
+        if data.get("horario"):
+            partes.append(f"HORARIO: {data['horario']}")
+        if data.get("direccion"):
+            partes.append(f"UBICACION/DIRECCION: {data['direccion']}")
+        if data.get("tarifas"):
+            partes.append(f"TARIFAS Y PRECIOS: {data['tarifas']}")
+        if data.get("reglas"):
+            partes.append(f"REGLAS Y CONDICIONES: {data['reglas']}")
+        if data.get("instrucciones_ia"):
+            partes.append(f"INSTRUCCIONES ESPECIALES: {data['instrucciones_ia']}")
+        config_negocio = "\n".join(partes)
+
+        system_prompt = f"""You are '{nombre_empresa}', answering a real-time phone call.
+
+=== BUSINESS CONFIGURATION (THIS IS WHO YOU ARE) ===
+{config_negocio}
+=== END CONFIGURATION ===
+
+RULES:
+1. You ARE {nombre_empresa}. Adopt the personality and tone from INSTRUCCIONES ESPECIALES above.
+2. You ONLY know what is listed above. Use exact prices, address, schedule. NEVER invent data.
+3. Detect the caller's language and respond in the same language.
+4. Speak in short, natural sentences suitable for voice. No lists or bullet points.
+5. If asked for the address/location, give it exactly as listed above.
+6. Offer to send details via WhatsApp or schedule a visit when appropriate."""
+
+        VOCES = {
+            "openai_alloy": {"provider": "openai", "voiceId": "alloy"},
+            "openai_echo": {"provider": "openai", "voiceId": "echo"},
+            "openai_nova": {"provider": "openai", "voiceId": "nova"},
+            "openai_onyx": {"provider": "openai", "voiceId": "onyx"},
+            "openai_shimmer": {"provider": "openai", "voiceId": "shimmer"},
+            "openai_fable": {"provider": "openai", "voiceId": "fable"},
+        }
+        voz_config = VOCES.get(voz_asistente, {"provider": "openai", "voiceId": "shimmer"})
+
+        return {
+            "assistant": {
+                "firstMessage": f"Hola, has llamado a {nombre_empresa}, en que te puedo ayudar?",
+                "model": {
+                    "provider": "openai",
+                    "model": "gpt-4o",
+                    "messages": [{"role": "system", "content": system_prompt}]
+                },
+                "voice": voz_config,
             }
-            voz_config = VOCES.get(voz_asistente)
-            if voz_config:
-                return {
-                    "assistant": {
-                        "voice": voz_config
-                    }
-                }
+        }
 
     if type_event == "tool-calls":
         tool_calls = message.get("toolCalls", [])

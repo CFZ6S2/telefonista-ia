@@ -6,6 +6,21 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "headers": [
+      {
+        "source": "/favicon.ico",
+        "headers": [
+          { "key": "Content-Type", "value": "image/svg+xml" }
+        ]
+      }
+    ],
+    "redirects": [
+      {
+        "source": "/favicon.ico",
+        "destination": "/favicon.svg",
+        "type": 301
+      }
+    ],
     "rewrites": [
       {
         "source": "/dashboard",

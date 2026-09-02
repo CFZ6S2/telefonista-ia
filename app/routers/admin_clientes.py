@@ -185,6 +185,30 @@ def listar_clientes():
         logger.error(f"Error consultando clientes en Firestore: {e}")
         return {"clientes": []}
 
+class ActualizarClientePayload(BaseModel):
+    nombre_empresa: Optional[str] = None
+    email: Optional[str] = None
+    horario: Optional[str] = None
+    direccion: Optional[str] = None
+    tarifas: Optional[str] = None
+    reglas: Optional[str] = None
+    instrucciones_ia: Optional[str] = None
+    telefono_personal: Optional[str] = None
+    voz_asistente: Optional[str] = None
+    telefono_voz: Optional[str] = None
+    ia_activa: Optional[bool] = None
+
+@router.patch("/actualizar-cliente/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
+def actualizar_cliente(cliente_id: str, payload: ActualizarClientePayload):
+    db = _get_db()
+    if not db:
+        raise HTTPException(status_code=503, detail="Firestore no disponible")
+    update = payload.model_dump(exclude_none=True)
+    if not update:
+        raise HTTPException(status_code=400, detail="Ningun campo para actualizar")
+    db.collection("clientes").document(cliente_id).set(update, merge=True)
+    return {"status": "ok", "updated": list(update.keys())}
+
 @router.get("/estado-ia/{cliente_id}", dependencies=[Depends(verificar_admin_api_key)])
 def get_estado_ia(cliente_id: str):
     return {"cliente_id": cliente_id, "ia_activa": obtener_estado_ia(cliente_id)}

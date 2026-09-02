@@ -277,7 +277,7 @@
     <div class="footer">Telefonista IA &middot; Asistente Virtual 24/7 para tu negocio</div>
 
     <script>
-        const API_BASE = window.location.origin;
+        const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://telefonista-api.duckdns.org";
         let clienteId = null;
         let pollingInterval = null;
 

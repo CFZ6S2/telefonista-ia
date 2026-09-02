@@ -138,7 +138,7 @@
 </div>
 
 <script>
-    const API_BASE = window.location.origin;
+    const API_BASE = window.location.origin.includes("localhost") ? "http://localhost:8000" : "https://telefonista-api.duckdns.org";
     let currentClienteId = null;
     let currentPin = null;
 
